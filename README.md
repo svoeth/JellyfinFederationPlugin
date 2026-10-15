@@ -9,7 +9,7 @@ Disclaimer: this fork has been primarily written by AI, and has not had a human-
 - Existing friend connections and plugin configuration are retained. Jellyfin 12 with 0.0.160 can connect to Jellyfin 10.11 with 0.0.135; sync and Direct/Proxy playback are verified in both directions. Friends on 10.11 do not need to upgrade together.
 
 ## Installation
-1. Add https://raw.githubusercontent.com/Saintdoggie/JellyfinFederationPlugin/master/manifest.json to your Jellyfin plugin repositories
+1. Add https://raw.githubusercontent.com/svoeth/JellyfinFederationPlugin/master/manifest.json to your Jellyfin plugin repositories
 2. Install the Jellyfin Federation plugin
 3. Restart Jellyfin, then open Dashboard → Plugins → Federation.
 
