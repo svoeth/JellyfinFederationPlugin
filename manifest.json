@@ -8,6 +8,14 @@
     "category": "General",
     "versions": [
       {
+        "version": "0.0.187",
+        "changelog": "Fix: friends you share only selected libraries with now receive those libraries' titles. Previously they got an empty catalog while sync still reported success, and per-user \"certain libraries\" rules hid everything. Update the server that shares the content.",
+        "targetAbi": "12.0.0.0",
+        "timestamp": "2026-10-15T22:39:23Z",
+        "sourceUrl": "https://github.com/svoeth/JellyfinFederationPlugin/releases/download/0.0.187/Jellyfin.Federation.zip",
+        "checksum": "4547c21be81e807bc7eba2e69adb907b"
+      },
+      {
         "version": "0.0.186",
         "changelog": "Security fix: downloading a friend's title to this server can no longer write a file outside the Federation downloads folder. A friend's server could previously use crafted media details to place a file anywhere Jellyfin can write. Updating is recommended for everyone who uses Download to server.",
         "targetAbi": "12.0.0.0",
