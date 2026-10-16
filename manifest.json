@@ -8,6 +8,14 @@
     "category": "General",
     "versions": [
       {
+        "version": "0.0.190",
+        "changelog": "Safer and faster sync. Titles a friend no longer lists are removed only after two syncs in a row, and a large removal (more than 25 titles and 10% of a library) waits until you confirm it on the Libraries tab. Friends tell each other when their library changes, so new titles arrive within minutes. Failed requests are retried and interrupted downloads resume. Unchanged syncs are much faster on large libraries, friends are checked in parallel, and episode images are downloaded at a smaller size. Update both servers.",
+        "targetAbi": "12.0.0.0",
+        "timestamp": "2026-10-16T14:52:24Z",
+        "sourceUrl": "https://github.com/svoeth/JellyfinFederationPlugin/releases/download/0.0.190/Jellyfin.Federation.zip",
+        "checksum": "8d04c78e2b866d9e82247518268b18f5"
+      },
+      {
         "version": "0.0.189",
         "changelog": "Fixes TV shows losing their episodes: when a friend's Jellyfin found TVDB/TMDB ids for its shows, every show, season and episode was deleted and recreated here, losing watched state. Titles now keep their identity. Syncs no longer rewrite every synced item in the Jellyfin database each time, which made large libraries slow, and friend libraries are paged in a stable order so episodes with identical names can't be skipped. New: the Libraries tab shows a sync status per friend library - what will be downloaded before anything is, progress, and plain-language errors - and Refresh now runs in the background. Update both servers.",
         "targetAbi": "12.0.0.0",
