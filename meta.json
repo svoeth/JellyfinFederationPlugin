@@ -5,9 +5,9 @@
   "overview": "The Jellyfin Federation Plugin allows you to create a unified media library by aggregating content from multiple remote Jellyfin servers. Stream content from any server without file synchronization.",
   "owner": "Angablade",
   "category": "General",
-  "version": "0.0.191",
-  "changelog": "Reconnect: if a friend reinstalls the plugin or loses its keys, a new friend request from the same address renews the keys of the existing friendship (after you accept), keeping libraries, sharing settings and synced titles; each friend also has a Reconnect button. The internal key a server uses to read its own library is now replaced automatically when Jellyfin no longer knows it (this caused one-way 503 errors). Music: albums now sync with their songs. New friend requests: choose which libraries to share before sending or accepting a request; nothing is shared unless you tick it. Update both servers.",
+  "version": "0.0.192",
+  "changelog": "Music: artists now appear right after a sync, without waiting for a library scan. A library set to \"Audio\" also syncs the albums its songs belong to, and changing a library's type moves existing songs into their albums (play state is kept). Clearer names for music types in the library type dropdown.",
   "targetAbi": "12.0.0.0",
-  "timestamp": "2026-10-16T17:39:31Z",
+  "timestamp": "2026-10-16T18:59:15Z",
   "imageUrl": "thumb.png"
 }
