@@ -8,6 +8,14 @@
     "category": "General",
     "versions": [
       {
+        "version": "0.0.193",
+        "changelog": "Full resync: the Libraries tab has a \"Full resync\" button for each friend library. It deletes everything the plugin put into that library, recreates the library with its current type, and downloads it again - no need to delete and re-add the library by hand. Watch progress on those titles is lost; your own media is not touched.",
+        "targetAbi": "12.0.0.0",
+        "timestamp": "2026-10-16T19:20:18Z",
+        "sourceUrl": "https://github.com/svoeth/JellyfinFederationPlugin/releases/download/0.0.193/Jellyfin.Federation.zip",
+        "checksum": "9853ae357e1acaf4ae3a71bd5b46b3a1"
+      },
+      {
         "version": "0.0.192",
         "changelog": "Music: artists now appear right after a sync, without waiting for a library scan. A library set to \"Audio\" also syncs the albums its songs belong to, and changing a library's type moves existing songs into their albums (play state is kept). Clearer names for music types in the library type dropdown.",
         "targetAbi": "12.0.0.0",
