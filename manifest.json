@@ -8,6 +8,14 @@
     "category": "General",
     "versions": [
       {
+        "version": "0.0.191",
+        "changelog": "Reconnect: if a friend reinstalls the plugin or loses its keys, a new friend request from the same address renews the keys of the existing friendship (after you accept), keeping libraries, sharing settings and synced titles; each friend also has a Reconnect button. The internal key a server uses to read its own library is now replaced automatically when Jellyfin no longer knows it (this caused one-way 503 errors). Music: albums now sync with their songs. New friend requests: choose which libraries to share before sending or accepting a request; nothing is shared unless you tick it. Update both servers.",
+        "targetAbi": "12.0.0.0",
+        "timestamp": "2026-10-16T17:39:31Z",
+        "sourceUrl": "https://github.com/svoeth/JellyfinFederationPlugin/releases/download/0.0.191/Jellyfin.Federation.zip",
+        "checksum": "7e3f094df44c0ab79dc91e957e2f4f5b"
+      },
+      {
         "version": "0.0.190",
         "changelog": "Safer and faster sync. Titles a friend no longer lists are removed only after two syncs in a row, and a large removal (more than 25 titles and 10% of a library) waits until you confirm it on the Libraries tab. Friends tell each other when their library changes, so new titles arrive within minutes. Failed requests are retried and interrupted downloads resume. Unchanged syncs are much faster on large libraries, friends are checked in parallel, and episode images are downloaded at a smaller size. Update both servers.",
         "targetAbi": "12.0.0.0",
