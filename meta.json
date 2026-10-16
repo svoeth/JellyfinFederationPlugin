@@ -5,9 +5,9 @@
   "overview": "The Jellyfin Federation Plugin allows you to create a unified media library by aggregating content from multiple remote Jellyfin servers. Stream content from any server without file synchronization.",
   "owner": "Angablade",
   "category": "General",
-  "version": "0.0.193",
-  "changelog": "Full resync: the Libraries tab has a \"Full resync\" button for each friend library. It deletes everything the plugin put into that library, recreates the library with its current type, and downloads it again - no need to delete and re-add the library by hand. Watch progress on those titles is lost; your own media is not touched.",
+  "version": "0.0.194",
+  "changelog": "Removing a friend library now works cleanly, also while a sync is running: the sync skips it instead of downloading it again into the library being deleted, and it disappears from the sync status list right away. Saving settings during a sync no longer breaks that sync (or a running stream or download) with \"Cannot access a disposed object\". Library removal recognises the plugin's own libraries more reliably and logs why it keeps one. A full resync still downloads the titles if recreating the library fails.",
   "targetAbi": "12.0.0.0",
-  "timestamp": "2026-10-16T19:20:18Z",
+  "timestamp": "2026-10-16T23:26:06Z",
   "imageUrl": "thumb.png"
 }
