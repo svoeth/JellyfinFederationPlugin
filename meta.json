@@ -5,9 +5,9 @@
   "overview": "The Jellyfin Federation Plugin allows you to create a unified media library by aggregating content from multiple remote Jellyfin servers. Stream content from any server without file synchronization.",
   "owner": "Angablade",
   "category": "General",
-  "version": "0.0.188",
-  "changelog": "Much faster sync with friends, especially for large libraries. Large libraries no longer time out: each page continues where the last one stopped instead of rereading the whole library. After the first sync, only new or changed titles are downloaded, and catalog data is sent compressed and without fields that were never used, so an unchanged sync is a tiny request. The Log tab now shows the server's own Federation messages, including why a friend's library failed to sync. Update both servers to get the full benefit; mixed versions keep working.",
+  "version": "0.0.189",
+  "changelog": "Fixes TV shows losing their episodes: when a friend's Jellyfin found TVDB/TMDB ids for its shows, every show, season and episode was deleted and recreated here, losing watched state. Titles now keep their identity. Syncs no longer rewrite every synced item in the Jellyfin database each time, which made large libraries slow, and friend libraries are paged in a stable order so episodes with identical names can't be skipped. New: the Libraries tab shows a sync status per friend library - what will be downloaded before anything is, progress, and plain-language errors - and Refresh now runs in the background. Update both servers.",
   "targetAbi": "12.0.0.0",
-  "timestamp": "2026-10-16T00:16:07Z",
+  "timestamp": "2026-10-16T13:02:20Z",
   "imageUrl": "thumb.png"
 }
