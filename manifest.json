@@ -8,6 +8,14 @@
     "category": "General",
     "versions": [
       {
+        "version": "0.0.196",
+        "changelog": "Privacy and control per friend. A friend no longer sees your users unless you share them (Friends -> Manage -> \"Users they can see\"); rules they already set keep working. Choose which of your friends each friend can discover, set an end date for sharing (the whole friendship or single libraries), and limit simultaneous streams and data per month. \"Preview what they see\" shows exactly what a friend gets. Friends watching your titles now appear on the plugin page and in Jellyfin's activity log, and the new Usage tab shows per-friend totals and the most watched titles. Optionally tell a friend what is popular on your server (play counts only); their server shows it as a \"Popular on ...\" collection. Update both servers.",
+        "targetAbi": "12.0.0.0",
+        "timestamp": "2026-10-19T22:23:34Z",
+        "sourceUrl": "https://github.com/svoeth/JellyfinFederationPlugin/releases/download/0.0.196/Jellyfin.Federation.zip",
+        "checksum": "58a282694a3cd5cb2174c53c761a9fc2"
+      },
+      {
         "version": "0.0.195",
         "changelog": "Music playback: when a friend's server refuses the byte range Jellyfin uses to read a song (\"416 Range Not Satisfiable\"), the plugin now asks for the whole file instead, so Jellyfin can read the song and play it. Other refused stream requests are logged with details on the Log tab.",
         "targetAbi": "12.0.0.0",
