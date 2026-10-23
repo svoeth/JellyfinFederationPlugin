@@ -19,7 +19,7 @@ namespace Jellyfin.Plugin.Federation.Services
     public class FederationStreamHandler
     {
         // Shared for the app lifetime: streaming responses can run for hours.
-        private static readonly HttpClient DefaultProxyHttpClient = new HttpClient
+        private static readonly HttpClient DefaultProxyHttpClient = new HttpClient(FederationHttp.Handler())
         {
             Timeout = TimeSpan.FromHours(3)
         };
@@ -764,7 +764,22 @@ namespace Jellyfin.Plugin.Federation.Services
                                 continue;
                             }
 
-                            if ((int)remoteResp.StatusCode >= 400 && (int)remoteResp.StatusCode < 500)
+                            // The friend refused for one of its own per-friend limits:
+                            // say so plainly (the viewer's player only sees a 429) and
+                            // pass the reason on.
+                            if ((int)remoteResp.StatusCode == 429 && remoteResp.Headers.TryGetValues(FriendDataLimits.RefusalHeader, out var refusal))
+                            {
+                                var why = refusal.FirstOrDefault();
+                                _logger.LogWarning(
+                                    "[Federation] The friend at {UpstreamHost} refused this stream: {Reason}",
+                                    GetSafeUpstreamHost(url),
+                                    FriendDataLimits.Describe(why));
+                                if (!headersSent && why != null)
+                                {
+                                    response.Headers[FriendDataLimits.RefusalHeader] = why;
+                                }
+                            }
+                            else if ((int)remoteResp.StatusCode >= 400 && (int)remoteResp.StatusCode < 500)
                             {
                                 _logger.LogWarning(
                                     "[Federation] Upstream stream at {UpstreamHost} returned HTTP {StatusCode} for range {Range} ({ContentRange})",

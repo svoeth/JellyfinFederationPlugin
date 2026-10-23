@@ -93,6 +93,7 @@ namespace Jellyfin.Plugin.Federation
             {
                 server.ApiKey = ApiKeyProtector.Unprotect(server.ApiKey);
                 server.IssuedApiKey = ApiKeyProtector.Unprotect(server.IssuedApiKey);
+                server.PairKey = ApiKeyProtector.Unprotect(server.PairKey);
             }
 
             config.InternalRelayApiKey = ApiKeyProtector.Unprotect(config.InternalRelayApiKey);
@@ -144,6 +145,7 @@ namespace Jellyfin.Plugin.Federation
             {
                 server.ApiKey = ApiKeyProtector.Protect(server.ApiKey);
                 server.IssuedApiKey = ApiKeyProtector.Protect(server.IssuedApiKey);
+                server.PairKey = ApiKeyProtector.Protect(server.PairKey);
             }
 
             clone.InternalRelayApiKey = ApiKeyProtector.Protect(clone.InternalRelayApiKey);
@@ -195,7 +197,7 @@ namespace Jellyfin.Plugin.Federation
             yield return new PluginPageInfo
             {
                 Name = Name,
-                EmbeddedResourcePath = GetType().Namespace + ".Configuration.configPage.html",
+                EmbeddedResourcePath = GetType().Namespace + ".Web.admin.configPage.html",
                 EnableInMainMenu = true,
                 DisplayName = "Federation",
                 MenuIcon = "public"
@@ -252,17 +254,6 @@ namespace Jellyfin.Plugin.Federation
             catch (Exception ex)
             {
                 _logger.LogError(ex, "[Federation] Plugin uninstall: failed to remove federated items; some virtual items may be left behind");
-            }
-
-            // "Popular on ..." collections hold federated items; remove them
-            // before the libraries those items live in.
-            try
-            {
-                (_serviceProvider.GetService(typeof(FederationPopularCollectionService)) as FederationPopularCollectionService)?.RemoveAll();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "[Federation] Plugin uninstall: could not remove the friends' popular collections");
             }
 
             // Auto-provisioned libraries (and shadow media paths merged into a

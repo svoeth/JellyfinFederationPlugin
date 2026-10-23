@@ -15,8 +15,7 @@ temporary directory. Only generated containers/network are removed on completion
 This measures HTTP startup on a local container network using an admin identity;
 it does **not** measure first rendered frame, client codec negotiation, transcoding,
 WAN conditions or watch-party synchronization. The first measured request is not
-guaranteed cache-cold after library scanning. See `STREAMING_REDESIGN.md` for the
-remaining benchmark matrix.
+guaranteed cache-cold after library scanning.
 
 For a real Chromium video-frame callback measurement, also pass
 `--playwright-module /absolute/path/to/node_modules/playwright` and optionally
@@ -33,6 +32,22 @@ Jellyfin may choose smaller output for the specified bitrate. HEVC cases skip th
 raw browser probe and measure converted playback. Use a separate `--output` path
 for each case to retain comparable reports. This is forced conversion of synthetic
 SDR media, not HDR tone mapping or automatic device-profile negotiation.
+
+## Two-server federation checks
+
+After a Release build:
+
+```sh
+JELLYFIN_TEST_IMAGE=<image id> python3 scripts/federation_peer_smoke.py     # playback, per-user hiding, unshare, device downloads, friends' favorites, friends' viewers on the owner's dashboard, Playback Info connection, outage, server-download destinations
+FEDERATION_SOURCE_DLL=<older plugin dll> JELLYFIN_TEST_IMAGE=<image id> python3 scripts/federation_peer_smoke.py  # current receiver, older friend
+JELLYFIN_TEST_IMAGE=<image id> python3 scripts/federation_handoff_smoke.py  # remote-transcode handoff end to end
+JELLYFIN_TEST_IMAGE=<image id> python3 scripts/federation_party_smoke.py    # watch parties across two servers (scripted SyncPlay players)
+```
+
+Each creates two disposable Jellyfin containers on a private network, makes them friends and
+removes everything afterwards. The handoff check proves the owner converts, segments come from
+the owner without any receiver credential, the receiver runs no ffmpeg, subtitles come from the
+owner, stop frees the owner's job, a block cuts in-flight URLs, and opt-out/limit fall back.
 
 ## Build and release gates
 

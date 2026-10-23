@@ -7,18 +7,18 @@
     <RootNamespace>Jellyfin.Plugin.Federation</RootNamespace>
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
     <Nullable>enable</Nullable>
-    <Version>0.0.196</Version>
-    <AssemblyVersion>0.0.196.0</AssemblyVersion>
-    <FileVersion>0.0.196.0</FileVersion>
+    <Version>0.0.199</Version>
+    <AssemblyVersion>0.0.199.0</AssemblyVersion>
+    <FileVersion>0.0.199.0</FileVersion>
     <!-- Keep the catalog DLL reproducible when its archive/checksum are committed. -->
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <EnableSourceLink>false</EnableSourceLink>
   </PropertyGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="Configuration\configPage.html" />
-    <EmbeddedResource Include="Web\federation-badge.js" />
-    <EmbeddedResource Include="Web\federation-adaptive.js" />
+    <EmbeddedResource Include="Web\admin\configPage.html" />
+    <EmbeddedResource Include="Web\client\federation-badge.js" />
+    <EmbeddedResource Include="Web\client\federation-adaptive.js" />
     <EmbeddedResource Include="Web\vendor\hls.light.min.js" />
   </ItemGroup>
 
@@ -33,6 +33,8 @@
     <Compile Remove="Companion\**" />
     <None Remove="Companion\**" />
     <Compile Remove="Companion.Tests\**" />
+    <Compile Remove="QuicTransport\**" />
+    <None Remove="QuicTransport\**" />
     <None Remove="Companion.Tests\**" />
   </ItemGroup>
 
@@ -46,12 +48,29 @@
     <None Update="thumb.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <!-- MsQuic for the direct link (see native/README.md); ships in the release zip at the same paths. -->
+    <None Include="native\linux-x64\libmsquic.so.2;native\linux-arm64\libmsquic.so.2">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>%(Identity)</Link>
+    </None>
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Jellyfin.Controller" Version="12.0.0" />
     <PackageReference Include="Jellyfin.Model" Version="12.0.0" />
   </ItemGroup>
+
+  <!-- The direct link's QUIC code, embedded and loaded into its own context at
+       run time (see Services/DirectLink/QuicTransportHost.cs). -->
+  <ItemGroup>
+    <ProjectReference Include="QuicTransport\Jellyfin.Plugin.Federation.QuicTransport.csproj" ReferenceOutputAssembly="false" Private="false" OutputItemType="QuicTransportOutput" />
+  </ItemGroup>
+
+  <Target Name="EmbedQuicTransport" AfterTargets="ResolveProjectReferences" BeforeTargets="PrepareResources;CoreCompile">
+    <ItemGroup>
+      <EmbeddedResource Include="@(QuicTransportOutput)" LogicalName="Jellyfin.Plugin.Federation.QuicTransport.dll" WithCulture="false" Type="Non-Resx" />
+    </ItemGroup>
+  </Target>
 
   <ItemGroup>
     <InternalsVisibleTo Include="Jellyfin.Plugin.Federation.Tests" />

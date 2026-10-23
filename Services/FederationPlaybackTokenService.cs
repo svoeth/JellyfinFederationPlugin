@@ -1,8 +1,12 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+using System.Threading;
 
 namespace Jellyfin.Plugin.Federation.Services
 {
@@ -23,21 +27,64 @@ namespace Jellyfin.Plugin.Federation.Services
     /// key straight out of dev tools/network tab and use it directly against the
     /// friend's server, far beyond what a single stream should have granted them.
     /// <para>
-    /// Deliberately simple: purely in-memory, no revocation UI, no admin visibility,
-    /// and no background sweep timer - each call opportunistically prunes anything
-    /// already expired. A token just naturally expires, or gets superseded by a fresh
-    /// mint the next time the client calls PlaybackInfo. A server restart clearing
-    /// every outstanding token is fine for the same reason.
+    /// Deliberately simple: no revocation UI, no admin visibility, and no
+    /// background sweep timer - each call opportunistically prunes anything
+    /// already expired. A token just naturally expires, or gets superseded by a
+    /// fresh mint the next time the client calls PlaybackInfo.
+    /// </para>
+    /// <para>
+    /// Outstanding tokens survive a restart: friends cache them, and a restart
+    /// that forgot them refused every play in progress or about to start until
+    /// the friend's cache ran out. Only a SHA-256 of each token is kept, in
+    /// memory and in <c>federation-playback-tokens.json</c>, so the file holds
+    /// nothing that could be used as a token.
     /// </para>
     /// </summary>
     public class FederationPlaybackTokenService
     {
         private static readonly TimeSpan PlaybackTokenLifetime = TimeSpan.FromHours(24);
         private static readonly TimeSpan DownloadTokenLifetime = TimeSpan.FromMinutes(15);
+
+        // A viewer saving a title to their own device: the transfer can take
+        // hours and the app resumes it with fresh range requests on the same
+        // URL. Every request still re-checks friendship, sharing and download
+        // permission, so the longer life only covers the resume window.
+        private static readonly TimeSpan ViewerDownloadTokenLifetime = TimeSpan.FromHours(12);
         internal static readonly TimeSpan OrdinaryDownloadWindow = TimeSpan.FromHours(1);
         internal const int OrdinaryDownloadLimit = 3;
 
+        // Viewer downloads are personal (an episode or a season to a phone), so
+        // they get their own allowance instead of the friend-wide three items
+        // an hour meant for a friend's server copying titles. The friend-wide
+        // cap keeps a friend server from using made-up viewers as a bulk pull.
+        internal const int ViewerDownloadLimit = 30;
+        internal const int ViewerDownloadFriendLimit = 120;
+
+        private const int MaxStoredTokens = 20000;
+
         private readonly ConcurrentDictionary<string, Entry> _tokens = new(StringComparer.Ordinal);
+        private readonly string? _storePath;
+        private readonly Timer? _saveTimer;
+        private int _saveScheduled;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="FederationPlaybackTokenService"/> class
+        /// that keeps its tokens in the plugin's data folder (none in tests).
+        /// </summary>
+        public FederationPlaybackTokenService()
+            : this(DefaultStorePath())
+        {
+        }
+
+        internal FederationPlaybackTokenService(string? storePath)
+        {
+            _storePath = storePath;
+            if (storePath != null)
+            {
+                Load(storePath);
+                _saveTimer = new Timer(_ => Save(), null, Timeout.Infinite, Timeout.Infinite);
+            }
+        }
         private readonly object _downloadGate = new();
         private readonly Dictionary<string, Dictionary<string, DateTime>> _ordinaryDownloads = new(StringComparer.OrdinalIgnoreCase);
 
@@ -71,7 +118,8 @@ namespace Jellyfin.Plugin.Federation.Services
             Prune();
 
             var token = Convert.ToHexString(RandomNumberGenerator.GetBytes(24));
-            _tokens[token] = new Entry(remoteItemId, federationId, purpose, remoteUserId, DateTime.UtcNow + GetLifetime(purpose));
+            _tokens[Key(token)] = new Entry(remoteItemId, federationId, purpose, remoteUserId, DateTime.UtcNow + GetLifetime(purpose, !string.IsNullOrWhiteSpace(remoteUserId)));
+            ScheduleSave();
             return token;
         }
 
@@ -87,14 +135,49 @@ namespace Jellyfin.Plugin.Federation.Services
             string federationId,
             string remoteItemId,
             out TimeSpan retryAfter)
+            => TryReserve(federationId, remoteItemId, OrdinaryDownloadLimit, out retryAfter);
+
+        /// <summary>
+        /// The allowance for one viewer on a friend's server saving titles to
+        /// their own device, when the friend has ordinary but not bulk
+        /// downloads: <see cref="ViewerDownloadLimit"/> distinct items per
+        /// viewer per rolling hour, and <see cref="ViewerDownloadFriendLimit"/>
+        /// across all of that friend's viewers. Re-authorizing an item already
+        /// counted (a resumed transfer) is always allowed.
+        /// </summary>
+        public bool TryReserveViewerDownload(
+            string federationId,
+            string remoteUserId,
+            string remoteItemId,
+            out TimeSpan retryAfter)
+        {
+            lock (_downloadGate)
+            {
+                var viewerBucket = federationId + "|viewer|" + remoteUserId.Trim().ToLowerInvariant();
+                var friendBucket = federationId + "|viewers";
+                var itemKey = remoteUserId.Trim().ToLowerInvariant() + "|" + remoteItemId;
+                if (!TryReserve(viewerBucket, remoteItemId, ViewerDownloadLimit, out retryAfter, commit: false)
+                    || !TryReserve(friendBucket, itemKey, ViewerDownloadFriendLimit, out retryAfter, commit: false))
+                {
+                    return false;
+                }
+
+                TryReserve(viewerBucket, remoteItemId, ViewerDownloadLimit, out _);
+                TryReserve(friendBucket, itemKey, ViewerDownloadFriendLimit, out _);
+                retryAfter = TimeSpan.Zero;
+                return true;
+            }
+        }
+
+        private bool TryReserve(string bucket, string remoteItemId, int limit, out TimeSpan retryAfter, bool commit = true)
         {
             var now = DateTime.UtcNow;
             lock (_downloadGate)
             {
-                if (!_ordinaryDownloads.TryGetValue(federationId, out var reservations))
+                if (!_ordinaryDownloads.TryGetValue(bucket, out var reservations))
                 {
                     reservations = new Dictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
-                    _ordinaryDownloads[federationId] = reservations;
+                    _ordinaryDownloads[bucket] = reservations;
                 }
 
                 foreach (var expired in reservations
@@ -111,23 +194,38 @@ namespace Jellyfin.Plugin.Federation.Services
                     return true;
                 }
 
-                if (reservations.Count >= OrdinaryDownloadLimit)
+                if (reservations.Count >= limit)
                 {
                     var oldest = reservations.Values.Min();
                     retryAfter = (oldest + OrdinaryDownloadWindow) - now;
                     return false;
                 }
 
-                reservations[remoteItemId] = now;
+                if (commit)
+                {
+                    reservations[remoteItemId] = now;
+                }
+
                 retryAfter = TimeSpan.Zero;
                 return true;
             }
         }
 
         public static TimeSpan GetLifetime(FederationTokenPurpose purpose)
-            => purpose is FederationTokenPurpose.Download or FederationTokenPurpose.BulkDownload
-                ? DownloadTokenLifetime
-                : PlaybackTokenLifetime;
+            => GetLifetime(purpose, viewerBound: false);
+
+        /// <summary>
+        /// Token lifetime by purpose. An ordinary Download token minted for a
+        /// named viewer (a device download) lives long enough for the app to
+        /// resume an interrupted transfer; a server copy keeps the short life.
+        /// </summary>
+        public static TimeSpan GetLifetime(FederationTokenPurpose purpose, bool viewerBound)
+            => purpose switch
+            {
+                FederationTokenPurpose.Download when viewerBound => ViewerDownloadTokenLifetime,
+                FederationTokenPurpose.Download or FederationTokenPurpose.BulkDownload => DownloadTokenLifetime,
+                _ => PlaybackTokenLifetime
+            };
 
         /// <summary>
         /// DirectStream video/audio (and <c>download=true</c> file transfers).
@@ -189,14 +287,15 @@ namespace Jellyfin.Plugin.Federation.Services
                 return false;
             }
 
-            if (!_tokens.TryGetValue(token, out var entry))
+            var key = Key(token);
+            if (!_tokens.TryGetValue(key, out var entry))
             {
                 return false;
             }
 
             if (entry.ExpiresUtc <= DateTime.UtcNow)
             {
-                _tokens.TryRemove(token, out _);
+                _tokens.TryRemove(key, out _);
                 return false;
             }
 
@@ -218,6 +317,95 @@ namespace Jellyfin.Plugin.Federation.Services
             {
                 _tokens.TryRemove(key, out _);
             }
+        }
+
+        private static string Key(string token) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token)));
+
+        private static string? DefaultStorePath()
+        {
+            var dir = Plugin.Instance?.DataFolderPath;
+            return string.IsNullOrEmpty(dir) ? null : Path.Combine(dir, "federation-playback-tokens.json");
+        }
+
+        private void ScheduleSave()
+        {
+            if (_saveTimer != null && Interlocked.Exchange(ref _saveScheduled, 1) == 0)
+            {
+                _saveTimer.Change(TimeSpan.FromSeconds(2), Timeout.InfiniteTimeSpan);
+            }
+        }
+
+        private void Load(string path)
+        {
+            try
+            {
+                if (!File.Exists(path))
+                {
+                    return;
+                }
+
+                var now = DateTime.UtcNow;
+                var stored = JsonSerializer.Deserialize<List<StoredToken>>(File.ReadAllText(path)) ?? new List<StoredToken>();
+                foreach (var t in stored.Where(t => !string.IsNullOrEmpty(t.Key) && t.ExpiresUtc > now))
+                {
+                    _tokens[t.Key] = new Entry(t.RemoteItemId, t.FederationId, t.Purpose, t.RemoteUserId, DateTime.SpecifyKind(t.ExpiresUtc, DateTimeKind.Utc));
+                }
+            }
+            catch (Exception)
+            {
+                // A damaged file only means friends mint new tokens, as after
+                // any expiry; never a reason to fail startup.
+            }
+        }
+
+        /// <summary>Writes the outstanding tokens' hashes; internal for tests.</summary>
+        internal void Save()
+        {
+            Interlocked.Exchange(ref _saveScheduled, 0);
+            if (_storePath == null)
+            {
+                return;
+            }
+
+            try
+            {
+                Prune();
+                var list = _tokens
+                    .OrderByDescending(kv => kv.Value.ExpiresUtc)
+                    .Take(MaxStoredTokens)
+                    .Select(kv => new StoredToken
+                    {
+                        Key = kv.Key,
+                        RemoteItemId = kv.Value.RemoteItemId,
+                        FederationId = kv.Value.FederationId,
+                        Purpose = kv.Value.Purpose,
+                        RemoteUserId = kv.Value.RemoteUserId,
+                        ExpiresUtc = kv.Value.ExpiresUtc
+                    })
+                    .ToList();
+                var temp = _storePath + ".tmp";
+                File.WriteAllText(temp, JsonSerializer.Serialize(list));
+                File.Move(temp, _storePath, overwrite: true);
+            }
+            catch (Exception)
+            {
+                // Best effort, see Load.
+            }
+        }
+
+        private sealed class StoredToken
+        {
+            public string Key { get; set; } = string.Empty;
+
+            public string RemoteItemId { get; set; } = string.Empty;
+
+            public string FederationId { get; set; } = string.Empty;
+
+            public FederationTokenPurpose Purpose { get; set; }
+
+            public string? RemoteUserId { get; set; }
+
+            public DateTime ExpiresUtc { get; set; }
         }
 
         private readonly record struct Entry(

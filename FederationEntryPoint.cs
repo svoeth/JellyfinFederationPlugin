@@ -55,12 +55,8 @@ namespace Jellyfin.Plugin.Federation
             WanBandwidthMonitor bandwidthMonitor,
             FederationLogBuffer logBuffer,
             AvailabilityScheduleStore availabilitySchedule,
-            FederationChangeNotifier changeNotifier,
-            FederationFriendActivityService friendActivity)
+            FederationChangeNotifier changeNotifier)
         {
-            // Created at startup, not on first use, so plays by local users
-            // are counted for the popularity list from the start.
-            _ = friendActivity;
             _changeNotifier = changeNotifier;
             _logger = logger;
             _federationManager = federationManager;
@@ -84,6 +80,7 @@ namespace Jellyfin.Plugin.Federation
         {
             // Friends are told about changes to this server's own catalog.
             _changeNotifier.Start();
+            IncomingContentFilterService.UnknownCeilingLogger = msg => _logger.LogWarning("{Message}", msg);
             _logger.LogInformation("Federation Plugin Entry Point started");
             _logger.LogInformation(
                 "[Federation] Fast-start probing: {State}",

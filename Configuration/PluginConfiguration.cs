@@ -246,6 +246,13 @@ namespace Jellyfin.Plugin.Federation.Configuration
         public List<PoolInvite> OutgoingPoolInvites { get; set; } = new List<PoolInvite>();
 
         /// <summary>
+        /// Gets or sets servers that declined an automatic friends-of-friends
+        /// request from this server, with when to ask again, so a rejection isn't
+        /// followed by a new request on every sync.
+        /// </summary>
+        public List<DeclinedDiscoveryCandidate> DeclinedDiscoveryCandidates { get; set; } = new List<DeclinedDiscoveryCandidate>();
+
+        /// <summary>
         /// Gets or sets pool invites received from already-known friends, awaiting
         /// this server's admin to accept or reject. See <see cref="PoolInvite"/>.
         /// </summary>
@@ -465,6 +472,172 @@ namespace Jellyfin.Plugin.Federation.Configuration
         /// every other sharing rule already goes through.
         /// </summary>
         public List<string> GloballyExcludedItemIds { get; set; } = new List<string>();
+
+        /// <summary>
+        /// Gets or sets whether friends may convert this server's titles here and
+        /// stream the result straight to their players (owner side of the
+        /// remote-transcode handoff). Per-friend switch:
+        /// <see cref="RemoteServer.AllowRemoteTranscode"/>. Managed by
+        /// <c>Settings/RemoteTranscode</c>, preserved by the main Save.
+        /// </summary>
+        public bool EnableRemoteTranscodeForFriends { get; set; } = true;
+
+        /// <summary>
+        /// Gets or sets whether this server opens direct links with friends: an
+        /// encrypted UDP connection straight between the two servers, punched
+        /// through both home routers, so a friend's video doesn't have to go
+        /// through a slow tunnel or VPS. Needs the friend on 0.0.195+.
+        /// Off by default: a direct link shows each friend's server this home's
+        /// internet address, which a tunnel or VPS may be there to keep private.
+        /// Replaces 0.0.195's <c>EnableDirectLink</c> (default on), so servers that
+        /// had it saved start off until the admin opts in.
+        /// Per-friend switch: <see cref="RemoteServer.DirectLinkMode"/>. Managed
+        /// by <c>Settings/DirectLink</c>, preserved by the main Save.
+        /// </summary>
+        public bool DirectLinkOptIn { get; set; }
+
+        /// <summary>
+        /// Gets or sets how many video segments the direct-link relay fetches ahead
+        /// of the player (0 turns it off, at most 6). One download from a friend can
+        /// stop well short of the line's speed; a few at once fill it, so the
+        /// player's next segments are already here when it asks.
+        /// </summary>
+        public int DirectLinkReadAhead { get; set; } = 3;
+
+        /// <summary>
+        /// Gets or sets a value indicating whether this server can pair with friends
+        /// that have no reachable address, by swapping two codes (docs/PAIRING.md).
+        /// Experimental, off by default: a paired friend sees this home's internet
+        /// address. While off, no pairing port is open. Managed by
+        /// <c>Settings/Pairing</c>, preserved by the main Save.
+        /// </summary>
+        public bool PairingOptIn { get; set; }
+
+        /// <summary>Gets or sets the first UDP port pairings may use (each pairing keeps one).</summary>
+        public int PairingPortFirst { get; set; } = 47950;
+
+        /// <summary>Gets or sets the last UDP port pairings may use.</summary>
+        public int PairingPortLast { get; set; } = 47999;
+
+        /// <summary>
+        /// Gets or sets the STUN servers (<c>host:port</c>) a direct link asks for
+        /// this server's public address. Two are needed to tell router kinds apart.
+        /// </summary>
+        public string[] DirectLinkStunServers { get; set; } = { "stun.cloudflare.com:3478", "stun.l.google.com:19302" };
+
+        /// <summary>
+        /// Gets or sets a value indicating whether a friend whose viewer's play this
+        /// server converts may fetch that play's conversion log (credentials
+        /// blanked), so it shows in the friend's own logs.
+        /// </summary>
+        public bool ShareConversionLogsWithFriends { get; set; } = true;
+
+        /// <summary>
+        /// Gets or sets how many playback sessions one friend may convert here at
+        /// once (0 = no limit). A session over the limit is refused, and the
+        /// friend's server converts it itself instead.
+        /// </summary>
+        public int MaxRemoteTranscodesPerFriend { get; set; }
+
+        /// <summary>
+        /// Gets or sets whether this server hands conversion of a friend's title to
+        /// that friend's server (receiver side of the remote-transcode handoff), so
+        /// the video never passes through this server. When the friend can't (older
+        /// version, switched off, at its limit, unreachable), this server converts
+        /// as before.
+        /// </summary>
+        public bool UseFriendsTranscoders { get; set; } = true;
+
+        /// <summary>
+        /// Gets or sets whether friends may see which of this server's own titles
+        /// its users favorited: titles only, never who, and only titles already
+        /// shared with the viewer asking. Shown on their Favorites tab as
+        /// "Favorites on (this server)". Managed by <c>Settings/Favorites</c>,
+        /// preserved by the main Save.
+        /// </summary>
+        public bool ShareFavoritesWithFriends { get; set; } = true;
+
+        /// <summary>
+        /// Gets or sets whether this server's Favorites tab shows a section per
+        /// friend with the titles that friend's users favorited. Managed by
+        /// <c>Settings/Favorites</c>, preserved by the main Save.
+        /// </summary>
+        public bool ShowFriendsFavorites { get; set; } = true;
+
+        /// <summary>
+        /// Gets or sets whether friends may see which of this server's own titles
+        /// were most played here in the last 30 days: counts of distinct users,
+        /// never who, and only titles already shared with the viewer asking.
+        /// Shown on their Home tab as "Popular on (this server)". Managed by
+        /// <c>Settings/Favorites</c>, preserved by the main Save.
+        /// </summary>
+        public bool SharePopularWithFriends { get; set; } = true;
+
+        /// <summary>
+        /// Gets or sets whether this server's Home tab shows a "Popular on
+        /// (friend)" row per friend. Managed by <c>Settings/Favorites</c>,
+        /// preserved by the main Save.
+        /// </summary>
+        public bool ShowFriendsPopular { get; set; } = true;
+
+        /// <summary>Gets or sets whether this server's viewers can start watch parties with friends and friends may join them.</summary>
+        public bool HostWatchPartiesWithFriends { get; set; } = true;
+
+        /// <summary>Gets or sets whether friends' watch parties appear in this server's SyncPlay group list.</summary>
+        public bool JoinFriendsWatchParties { get; set; } = true;
+
+        /// <summary>
+        /// Gets or sets where "download to this server" puts files when the admin
+        /// doesn't pick: "auto" (Movies for films, Shows for episodes),
+        /// "library:&lt;name&gt;", "folder:&lt;path&gt;" or "separate" (the
+        /// Federation Downloads library older versions always used).
+        /// </summary>
+        public string DownloadDestination { get; set; } = Services.DownloadDestinations.Auto;
+
+        /// <summary>Gets or sets whether friends are told what this server's viewers are watching of theirs, so it shows on their dashboard.</summary>
+        public bool ShareViewersWithFriends { get; set; } = true;
+
+        /// <summary>Gets or sets whether friends' viewers watching this server's titles show on the dashboard like local sessions.</summary>
+        public bool ShowFriendsViewers { get; set; } = true;
+
+        /// <summary>Gets or sets whether friends may see what this server converts video with (GPU/CPU model and codecs; nothing else).</summary>
+        public bool ShareTranscodeHardware { get; set; } = true;
+
+        /// <summary>
+        /// Gets or sets whether a friend's title is converted here instead of on
+        /// the friend when the friend's hardware falls short of the minimums
+        /// below and this server meets them. Off: the friend always converts.
+        /// </summary>
+        public bool SmartTranscodePlacement { get; set; }
+
+        /// <summary>Gets or sets "auto" (read Jellyfin's playback settings) or "manual" (described below).</summary>
+        public string TranscodeHardwareMode { get; set; } = "auto";
+
+        /// <summary>Gets or sets a value indicating whether conversions run on another machine (for example a broker that sends ffmpeg to a gaming PC).</summary>
+        public bool TranscodeHardwareOffloaded { get; set; }
+
+        /// <summary>Gets or sets the GPU that actually converts, as free text.</summary>
+        public string? ManualTranscodeGpu { get; set; }
+
+        /// <summary>Gets or sets the CPU of the machine that converts, when offloaded.</summary>
+        public string? ManualTranscodeCpu { get; set; }
+
+        public int ManualTranscodeCpuThreads { get; set; }
+
+        /// <summary>Gets or sets the codecs the converting GPU decodes ("h264", "hevc", "hevc10", "av1", "vp9").</summary>
+        public List<string> ManualHardwareDecodeCodecs { get; set; } = new List<string>();
+
+        /// <summary>Gets or sets the codecs the converting GPU encodes ("h264", "hevc", "av1").</summary>
+        public List<string> ManualHardwareEncodeCodecs { get; set; } = new List<string>();
+
+        /// <summary>Gets or sets the least a server must manage to convert 4K: "full" (hardware decode and encode), "encode" or "any".</summary>
+        public string PlacementMinimum4k { get; set; } = "full";
+
+        /// <summary>Gets or sets the least a server must manage to convert 720p-1440p.</summary>
+        public string PlacementMinimumHd { get; set; } = "encode";
+
+        /// <summary>Gets or sets the CPU thread count that counts as a hardware encoder (0 = never).</summary>
+        public int PlacementCpuThreadsCountAsEncode { get; set; } = 16;
     }
 
     /// <summary>
@@ -688,80 +861,17 @@ namespace Jellyfin.Plugin.Federation.Configuration
         public List<string> SharedLibraryFolderIds { get; set; } = new List<string>();
 
         /// <summary>
-        /// Gets or sets a value indicating whether this friend may see every one
-        /// of this server's local user accounts (names, for their per-user
-        /// rules). False by default, also for friends made before this setting
-        /// existed: a friend sees no users unless shared here or in
-        /// <see cref="SharedUserIds"/>. Enforced by <c>Peer/Users</c>.
-        /// </summary>
-        public bool ShareAllUsers { get; set; }
-
-        /// <summary>
-        /// Gets or sets the ids (normalized "N" form) of this server's own local
-        /// users this friend may see when <see cref="ShareAllUsers"/> is false.
-        /// </summary>
-        public List<string> SharedUserIds { get; set; } = new List<string>();
-
-        /// <summary>
-        /// Gets or sets a value indicating whether this friend may see every one
-        /// of this server's other Jellyfin friends (name and address) for
-        /// friends-of-friends discovery. True by default, like
-        /// <see cref="ShareAllLibraries"/>; nothing is shared at all unless
-        /// <see cref="PluginConfiguration.AllowFriendsOfFriends"/> is on.
-        /// </summary>
-        public bool ShareAllFriends { get; set; } = true;
-
-        /// <summary>
-        /// Gets or sets the <see cref="Id"/>s of this server's other friends this
-        /// friend may see when <see cref="ShareAllFriends"/> is false.
-        /// </summary>
-        public List<string> SharedFriendIds { get; set; } = new List<string>();
-
-        /// <summary>
-        /// Gets or sets when everything shared with this friend stops being
-        /// shared (UTC), or null to share without an end date. After it the
-        /// friend sees nothing of this server, as if blocked; enforced at
-        /// request and stream time by <see cref="Services.FederationPeerAccessService"/>.
-        /// </summary>
-        public DateTime? SharingExpiresUtc { get; set; }
-
-        /// <summary>
-        /// Gets or sets end dates for individual shared libraries. An expired
-        /// library is no longer visible to this friend even when
-        /// <see cref="ShareAllLibraries"/> is on.
-        /// </summary>
-        public List<LibraryShareExpiry> LibraryShareExpiries { get; set; } = new List<LibraryShareExpiry>();
-
-        /// <summary>
-        /// Gets or sets how many of this server's titles this friend may stream
-        /// at the same time, or 0 for no limit. Downloads are not counted.
-        /// </summary>
-        public int MaxConcurrentStreams { get; set; }
-
-        /// <summary>
-        /// Gets or sets how many gigabytes this friend may stream or download
-        /// from this server per calendar month (UTC), or 0 for no limit.
-        /// </summary>
-        public int MonthlyDataCapGb { get; set; }
-
-        /// <summary>
-        /// Gets or sets a value indicating whether this friend may ask which of
-        /// this server's titles are popular (play counts only, never who
-        /// watched). Off by default.
-        /// </summary>
-        public bool SharePopularity { get; set; }
-
-        /// <summary>
-        /// Gets or sets a value indicating whether this server shows a
-        /// "Popular on ..." collection built from this friend's popularity list,
-        /// when the friend shares one. The friend decides whether to share it.
-        /// </summary>
-        public bool ShowPopularCollection { get; set; } = true;
-
-        /// <summary>
         /// Gets or sets the streaming mode to use for content from this server.
         /// </summary>
-        public StreamingMode StreamingMode { get; set; } = StreamingMode.Direct;
+        public StreamingMode StreamingMode
+        {
+            // A paired friend has no address a player (or Jellyfin's ffmpeg) can reach:
+            // its media always comes through this server, whatever is saved.
+            get => Paired ? StreamingMode.Proxy : _streamingMode;
+            set => _streamingMode = value;
+        }
+
+        private StreamingMode _streamingMode = StreamingMode.Direct;
 
         /// <summary>
         /// Gets or sets the priority used when picking a primary source for deduped items.
@@ -840,6 +950,106 @@ namespace Jellyfin.Plugin.Federation.Configuration
         public List<RemoteUserAccessRule> FriendUserAccessRules { get; set; } = new List<RemoteUserAccessRule>();
 
         /// <summary>
+        /// Gets or sets whether this friend may run transcodes on this server for
+        /// its users (the remote-transcode handoff: their player streams the
+        /// converted video straight from here while staying signed in to their own
+        /// server). Owner-side, per friend; on by default. When off, the friend
+        /// converts on its own server as before. Managed by
+        /// <c>Friends/{id}/RemoteTranscode</c>, preserved by the main Save.
+        /// </summary>
+        public bool AllowRemoteTranscode
+        {
+            // A handoff sends the friend's players to this server's address, which a
+            // paired friend's players can't reach.
+            get => !Paired && _allowRemoteTranscode;
+            set => _allowRemoteTranscode = value;
+        }
+
+        private bool _allowRemoteTranscode = true;
+
+        /// <summary>
+        /// Gets or sets how many GB this server will send this friend per UTC
+        /// calendar month (0 = no limit). Counts every path that sends them media:
+        /// Direct play, remote-transcode play, downloads. Managed by
+        /// <c>Friends/{id}/Limits</c>, preserved by the main Save.
+        /// </summary>
+        public int MonthlyDataCapGb { get; set; }
+
+        /// <summary>
+        /// Gets or sets how many streams (Direct plays plus remote-transcode plays)
+        /// this friend may have at once (0 = no limit). Downloads don't count.
+        /// Managed by <c>Friends/{id}/Limits</c>, preserved by the main Save.
+        /// </summary>
+        public int MaxConcurrentStreams { get; set; }
+
+        /// <summary>
+        /// Gets or sets whether a direct link to this friend is used: <c>Auto</c>
+        /// (when both sides support it) or <c>Off</c>. Managed by
+        /// <c>Friends/{id}/DirectLink</c>, preserved by the main Save.
+        /// </summary>
+        public string DirectLinkMode
+        {
+            // A paired friend already has its link; the direct-link offer doesn't apply.
+            get => Paired ? "Off" : _directLinkMode;
+            set => _directLinkMode = value;
+        }
+
+        private string _directLinkMode = "Auto";
+
+        /// <summary>
+        /// Gets or sets a value indicating whether this friend was paired with codes
+        /// (docs/PAIRING.md): it has no reachable address, its <see cref="Url"/> is its
+        /// <c>http://[100::…]</c> link address, and everything goes over the link.
+        /// Set only by the pairing service; the main Save keeps it as it was.
+        /// </summary>
+        public bool Paired { get; set; }
+
+        /// <summary>Gets or sets the 64-bit pairing id (16 hex digits) in this friend's link address.</summary>
+        public string PairingId { get; set; } = string.Empty;
+
+        /// <summary>Gets or sets the SHA-256 (hex) of the friend's pairing certificate; the link accepts only it.</summary>
+        public string PairPeerFingerprint { get; set; } = string.Empty;
+
+        /// <summary>Gets or sets the pair key (base64; encrypted on disk like <see cref="ApiKey"/>).</summary>
+        public string PairKey { get; set; } = string.Empty;
+
+        /// <summary>Gets or sets this side's role on the link: 0 when its certificate sorts lower (QUIC client), else 1.</summary>
+        public int PairRole { get; set; }
+
+        /// <summary>Gets or sets the friend's last known pairing-port endpoints (<c>ip:port</c>).</summary>
+        public List<string> PairLastEndpoints { get; set; } = new List<string>();
+
+        /// <summary>Gets or sets the safety number shown to both admins for this pairing.</summary>
+        public string PairSafetyNumber { get; set; } = string.Empty;
+
+        /// <summary>Gets or sets a value indicating whether this admin confirmed the safety number matched.</summary>
+        public bool PairSafetyConfirmed { get; set; }
+
+        /// <summary>Gets or sets a value indicating whether the friend's admin confirmed it too.</summary>
+        public bool PairPeerConfirmed { get; set; }
+
+        /// <summary>Gets or sets the friends (ids) allowed to pass reconnect messages for this pairing.</summary>
+        public List<string> PairHelperIds { get; set; } = new List<string>();
+
+        /// <summary>Gets or sets the last reconnect-message counter sent to this friend.</summary>
+        public long PairMailCounterOut { get; set; }
+
+        /// <summary>Gets or sets the last reconnect-message counter accepted from this friend.</summary>
+        public long PairMailCounterIn { get; set; }
+
+        /// <summary>Gets or sets when the pairing was made.</summary>
+        public DateTime? PairedAtUtc { get; set; }
+
+        /// <summary>Gets or sets when this pairing's link was last up (null: never).</summary>
+        public DateTime? PairLastConnectedUtc { get; set; }
+
+        /// <summary>Gets or sets this server's UDP port for this pairing.</summary>
+        public int PairLocalPort { get; set; }
+
+        /// <summary>Gets or sets the name the friend's code gave (untrusted; shown as "calls itself …").</summary>
+        public string PairClaimedName { get; set; } = string.Empty;
+
+        /// <summary>
         /// Gets or sets whether this friend's federated items are allowed to be
         /// downloaded to local storage via <see cref="Services.FederationDownloadService"/>.
         /// True by default — downloads still need an authenticated admin request.
@@ -853,6 +1063,21 @@ namespace Jellyfin.Plugin.Federation.Configuration
         /// part of the library in one action.
         /// </summary>
         public bool AllowBulkDownloads { get; set; } = false;
+
+        /// <summary>
+        /// Gets or sets whether this friend lets our viewers download its titles
+        /// (its <see cref="AllowDownloads"/> for us), as last reported by its
+        /// <c>Peer/UserRules</c>. Null when unknown (an older friend): Download is
+        /// then offered and the friend decides when it's used.
+        /// </summary>
+        public bool? PeerAllowsDownloads { get; set; }
+
+        /// <summary>
+        /// Gets or sets whether this friend shares which titles its users
+        /// favorited, as last reported by its <c>Peer/UserRules</c>. Null when
+        /// unknown (an older friend without <c>Peer/Favorites</c>).
+        /// </summary>
+        public bool? PeerSharesFavorites { get; set; }
     }
 
     /// <summary>
@@ -894,19 +1119,6 @@ namespace Jellyfin.Plugin.Federation.Configuration
         /// allows.
         /// </summary>
         Blocked = 3
-    }
-
-    /// <summary>
-    /// End date for sharing one library with a friend. A list entry rather
-    /// than a dictionary: the plugin configuration is XML-serialized.
-    /// </summary>
-    public class LibraryShareExpiry
-    {
-        /// <summary>Gets or sets the library folder id (same id space as <see cref="RemoteServer.SharedLibraryFolderIds"/>).</summary>
-        public string FolderId { get; set; } = string.Empty;
-
-        /// <summary>Gets or sets when sharing this library ends (UTC).</summary>
-        public DateTime ExpiresUtc { get; set; }
     }
 
     /// <summary>
@@ -1407,5 +1619,18 @@ namespace Jellyfin.Plugin.Federation.Configuration
 
         /// <summary>Gets or sets the same folder as this Jellyfin server sees it, e.g. <c>/mnt/media</c>.</summary>
         public string To { get; set; } = string.Empty;
+    }
+}
+
+namespace Jellyfin.Plugin.Federation.Configuration
+{
+    /// <summary>A server that rejected our automatic friend request; not asked again until <see cref="UntilUtc"/>.</summary>
+    public class DeclinedDiscoveryCandidate
+    {
+        /// <summary>Gets or sets the server's address, no trailing slash.</summary>
+        public string Url { get; set; } = string.Empty;
+
+        /// <summary>Gets or sets when the server may be asked again.</summary>
+        public DateTime UntilUtc { get; set; }
     }
 }

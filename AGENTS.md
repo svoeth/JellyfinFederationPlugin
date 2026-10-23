@@ -38,10 +38,10 @@ HTTP, UI, and browser injection:
 
 - `Configuration/FederationPluginController.cs` — the entire plugin HTTP API;
   check authorization attributes and input validation for every changed route.
-- `Configuration/configPage.html` — embedded admin UI. It is currently a large
+- `Web/admin/configPage.html` — embedded admin UI. It is currently a large
   single-file page with Friends, Pools, Companion, Discovery, Libraries,
   Browse/Downloads, Catalog, Storage, and Advanced tabs.
-- `Web/federation-badge.js` — jellyfin-web SPA injection: card/detail badges,
+- `Web/client/federation-badge.js` — jellyfin-web SPA injection: card/detail badges,
   action-sheet entries, downloads, hiding/sharing controls, and origin filter.
 - `Services/WebClientInjector.cs` and `Middleware/BadgeScriptInjectionMiddleware.cs`
   — disk and serve-time injection paths. Both must remain idempotent.
@@ -82,10 +82,41 @@ Playback, authorization, and downloads:
 - `Services/RemoteAccessControlService.cs` — receiving-side enforcement of
   rules pushed by a friend for this server's local users.
 - `Services/FederationDownloadService.cs` and `DownloadProgressTracker.cs` —
-  device/server downloads, bounded batch transfers, partial-file validation,
-  and progress. The old quality replacement endpoint is retired; Storage
+  server downloads (copy to this server), bounded batch transfers, partial-file
+  validation, and progress.
+- Device downloads (0.0.188): `FederationCanDownloadFilter.cs` (CanDownload on
+  friends' titles), `FederationDeviceDownloadFilter.cs` (answers native
+  `/Items/{id}/Download`), `FederationDeviceDownloadService.cs` (who may, which
+  friend, viewer-bound Download permit), `DeviceDownload.cs` (file names, route).
+  Owner side: `DirectStream?download=true` names the file; viewer allowance in
+  `FederationPlaybackTokenService.TryReserveViewerDownload`.
+- Watch parties (0.0.189): `FederatedPartyService.cs` (parties, links, heartbeat,
+  peer messages), `PartyLink.cs` (pure relay rules: echo suppression, Wait/Go
+  loading handshake, ground-truth state; unit tested), `PartyItemMapper.cs`
+  (title matching across servers), `PartyWire.cs`, `FederatedPartyFilters.cs`
+  (adds friends' parties to `/SyncPlay/List`, answers `/SyncPlay/Join`). E2E:
+  `scripts/federation_party_smoke.py` with `scripts/syncplay_player.py`.
+- `Services/FederationFriendFavoritesService.cs` — friends' favorites: owner
+  `Peer/Favorites`, viewer `FriendFavorites`; rows in `Web/client/federation-badge.js`. The old quality replacement endpoint is retired; Storage
   cleanup is delete-only and revalidates every exact local item immediately.
+- 0.0.190: `Services/DownloadDestinations.cs` (pure: where a server download goes,
+  on-disk naming, `DownloadedFileRegistry` keeping copies outside the downloads folder
+  unshareable); `Services/FederationViewerActivity.cs` (viewer side
+  `FederationViewerReporter` → owner `Peer/Viewers` → `FederationRemoteViewerService`
+  user-less dashboard sessions; `FederatedRoute`); `Services/TranscodeHardware.cs`
+  (`Peer/Hardware`, auto/manual hardware, `Decide` placement, default off, hooked in
+  `FederationMediaSourceProvider` before a grant is recorded); `Playback/Connection`
+  feeds the "Federation" block in the player's Playback Info (`federation-badge.js`).
 - `Services/WanBandwidthMonitor.cs` — local/WAN classification and caps.
+- Remote-transcode handoff (0.0.187): `Services/RemoteMediaPath.cs` (allow-list
+  shared by both sides), `HlsPlaylistRewriter.cs`, `FederationRemoteTranscodeGateway.cs`
+  + controller `Peer/Play/{token}/{**path}` and `Peer/PlayControl` (owner);
+  `FederationRemoteTranscodeFilter.cs`, `PeerTranscodeCapability.cs`,
+  `PeerPlaybackGrants.cs`, `RemoteTranscodeHandoffs.cs`,
+  `RemoteTranscodeSessionBridge.cs` (receiver); `RemoteTranscodeSessionRegistry.cs`.
+- `Services/FederationVisibilityService.cs` — friend per-user rules hide titles via
+  a per-user BlockedTags tag; same decision function as playback
+  (`RemoteAccessControlService.Evaluate`).
 
 Friendship and connectivity:
 
@@ -103,17 +134,11 @@ Tests and project history:
 
 - `Tests/` — xUnit/Moq regression suite. Locate the closest existing fixture
   before creating a new one; streaming and sharing tests encode hard-won bugs.
-- `KNOWN_ISSUES.md` — confirmed unresolved limitations.
-- `ideas.md` — historical design notes and root-cause writeups. Read the
-  relevant section before modifying persistence or playback.
-- `manifest.json`, `meta.json`, and `Jellyfin.Federation.zip` — plugin release
-  metadata/artifact.
+- `manifest.json` and `meta.json` — plugin release metadata. The plugin zip is
+  a GitHub release asset, not committed.
 - `.github/workflows/companion-release.yml` — rolling Companion builds; it is
   separate from plugin version releases.
 - `TODO.md` — active reliability/security/polish release checklist.
-- `Companion/DESKTOP-APP-TODO.md` — Companion desktop-app handoff: Windows
-  tray/WinExe, Linux XDG autostart, single-instance, RAM tuning, remaining
-  platform validation. Read before changing Companion startup or packaging.
 
 ## Non-negotiable engineering invariants
 
@@ -175,8 +200,8 @@ Tests and project history:
   Apply endpoint always refuses replacement downloads. Storage removal requires
   explicit selected IDs plus confirmation and rebuilds the candidate set before
   deleting any exact local file.
-- `Configuration/configPage.html` is approximately 5,700 lines and
-  `Web/federation-badge.js` approximately 1,000 lines. Make narrow changes with
+- `Web/admin/configPage.html` is approximately 5,700 lines and
+  `Web/client/federation-badge.js` approximately 1,000 lines. Make narrow changes with
   regression tests before attempting structural cleanup.
 
 ## Validation and release policy

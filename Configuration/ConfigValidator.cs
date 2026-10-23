@@ -39,9 +39,12 @@ namespace Jellyfin.Plugin.Federation.Configuration
                 return false;
             }
 
+            // A paired friend's link address (100::/64) is never valid input: only the
+            // pairing service makes friends with one (see FederationHttp).
             return Uri.TryCreate(url, UriKind.Absolute, out var uri)
                 && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps)
                 && !string.IsNullOrWhiteSpace(uri.Host)
+                && !Services.FederationHttp.IsPairHost(uri.Host)
                 && string.IsNullOrEmpty(uri.UserInfo)
                 && string.IsNullOrEmpty(uri.Query)
                 && string.IsNullOrEmpty(uri.Fragment);
@@ -123,6 +126,44 @@ namespace Jellyfin.Plugin.Federation.Configuration
             return false;
         }
 
+        /// <summary>
+        /// Like <see cref="IsPrivateOrLoopbackHost"/> but lets CGNAT/Tailscale
+        /// (100.64.0.0/10) addresses through, for addresses another server handed us
+        /// that we contact automatically: friends commonly run over a tailnet, but
+        /// loopback, LAN, link-local/metadata and unspecified (0.0.0.0, ::) stay refused.
+        /// </summary>
+        public static bool IsBlockedForAutoContact(string? url)
+        {
+            if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+            {
+                return false;
+            }
+
+            if (IPAddress.TryParse(uri.IdnHost, out var ip))
+            {
+                if (ip.IsIPv4MappedToIPv6)
+                {
+                    ip = ip.MapToIPv4();
+                }
+
+                if (ip.Equals(IPAddress.Any) || ip.Equals(IPAddress.IPv6Any))
+                {
+                    return true;
+                }
+
+                if (ip.AddressFamily == AddressFamily.InterNetwork)
+                {
+                    var b = ip.GetAddressBytes();
+                    if (b[0] == 100 && b[1] >= 64 && b[1] <= 127)
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            return IsPrivateOrLoopbackHost(url);
+        }
+
         private static bool IsWellKnownLoopbackOrMetadataHostname(string host)
         {
             if (string.IsNullOrEmpty(host))
@@ -165,6 +206,13 @@ namespace Jellyfin.Plugin.Federation.Configuration
                 // Treating that empty field like a Jellyfin/Plex source made every
                 // unrelated settings save fail as soon as a Companion friend existed.
                 if (servers[i].Kind == ServerKind.Companion && string.IsNullOrWhiteSpace(servers[i].Url))
+                {
+                    continue;
+                }
+
+                // A paired friend keeps its link address; the save handler copies both
+                // from the stored friend, so a client can't make one up.
+                if (servers[i].Paired && Services.FederationHttp.IsPairUrl(servers[i].Url))
                 {
                     continue;
                 }

@@ -53,7 +53,7 @@ namespace Jellyfin.Plugin.Federation.Services
         // so editing a server's URL discards its old result.
         private static readonly ConcurrentDictionary<string, (string From, string? To, DateTime CheckedUtc)> HttpsUpgrades = new(StringComparer.OrdinalIgnoreCase);
 
-        private static readonly HttpClient RedirectProbeClient = new(new SocketsHttpHandler { AllowAutoRedirect = false });
+        private static readonly HttpClient RedirectProbeClient = new(FederationHttp.Handler(allowAutoRedirect: false));
 
         private readonly ILoggerFactory _loggerFactory;
         private readonly ConcurrentDictionary<string, HttpClient> _httpClients = new();
@@ -146,6 +146,7 @@ namespace Jellyfin.Plugin.Federation.Services
             var configured = server.Url?.TrimEnd('/');
             if (string.IsNullOrEmpty(configured)
                 || server.Id == null
+                || server.Paired
                 || server.Kind != ServerKind.Jellyfin
                 || !Uri.TryCreate(configured, UriKind.Absolute, out var uri)
                 || uri.Scheme != Uri.UriSchemeHttp
@@ -228,9 +229,23 @@ namespace Jellyfin.Plugin.Federation.Services
         internal static void SeedHttpsUpgradeForTests(RemoteServer server, string? upgradedUrl)
             => HttpsUpgrades[server.Id] = (server.Url.TrimEnd('/'), upgradedUrl, DateTime.UtcNow);
 
-        private static HttpClient CreateHttpClient(RemoteServer server)
+        private static readonly ConcurrentDictionary<string, string> RedirectWarned = new();
+
+        private void LogBlockedRedirect(RemoteServer server, Uri to)
         {
-            var client = new HttpClient
+            if (RedirectWarned.TryGetValue(server.Id, out var seen) && seen == to.IdnHost)
+            {
+                return;
+            }
+
+            RedirectWarned[server.Id] = to.IdnHost;
+            _loggerFactory.CreateLogger<RemoteServerClientFactory>().LogWarning("[Federation] {ServerName} redirects to {Host}; update its address (the token is not sent to a different host)", server.Name, to.IdnHost);
+        }
+
+        private HttpClient CreateHttpClient(RemoteServer server)
+        {
+            // See TokenRedirect.FollowHandler: the token must not follow a redirect to another host.
+            var client = new HttpClient(new TokenRedirect.FollowHandler((_, to) => LogBlockedRedirect(server, to)))
             {
                 BaseAddress = new Uri(EffectiveUrl(server)),
                 Timeout = TimeSpan.FromMinutes(5)

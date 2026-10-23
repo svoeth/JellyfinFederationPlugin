@@ -19,7 +19,6 @@ namespace Jellyfin.Plugin.Federation.Tasks
         private readonly FederationSyncService _syncService;
         private readonly LibraryProvisioningService _provisioning;
         private readonly PlexStrmExportService _strmExport;
-        private readonly FederationPopularCollectionService _popularCollections;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="FederationRefreshTask"/> class.
@@ -28,10 +27,8 @@ namespace Jellyfin.Plugin.Federation.Tasks
             ILogger<FederationRefreshTask> logger,
             FederationSyncService syncService,
             LibraryProvisioningService provisioning,
-            PlexStrmExportService strmExport,
-            FederationPopularCollectionService popularCollections)
+            PlexStrmExportService strmExport)
         {
-            _popularCollections = popularCollections;
             _logger = logger;
             _syncService = syncService;
             _provisioning = provisioning;
@@ -79,10 +76,6 @@ namespace Jellyfin.Plugin.Federation.Tasks
                 progress?.Report(90);
 
                 await _strmExport.ExportAsync(cancellationToken).ConfigureAwait(false);
-                progress?.Report(95);
-
-                // After the sync, so newly synced titles can join the collections.
-                await _popularCollections.RefreshAsync(cancellationToken).ConfigureAwait(false);
                 progress?.Report(100);
 
                 if (result.Success)

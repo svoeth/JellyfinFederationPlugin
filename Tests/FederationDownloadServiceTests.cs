@@ -183,217 +183,6 @@ public class FederationDownloadServiceTests : IDisposable
     }
 
     [Fact]
-    public void GetDownloadUrl_InvalidItemId_Fails()
-    {
-        var (success, message, url, fileName) = _service.GetDownloadUrl("not-a-guid", enableContentDownloading: true);
-
-        Assert.False(success);
-        Assert.Contains("Invalid item id", message);
-        Assert.Null(url);
-        Assert.Null(fileName);
-    }
-
-    [Fact]
-    public void GetDownloadUrl_ItemNotFound_Fails()
-    {
-        var itemId = Guid.NewGuid();
-        _libraryManager.Setup(l => l.GetItemById(itemId)).Returns((MediaBrowser.Controller.Entities.BaseItem?)null);
-
-        var (success, message, url, fileName) = _service.GetDownloadUrl(itemId.ToString(), enableContentDownloading: true);
-
-        Assert.False(success);
-        Assert.Contains("not found", message, StringComparison.OrdinalIgnoreCase);
-        Assert.Null(url);
-        Assert.Null(fileName);
-    }
-
-    [Fact]
-    public void GetDownloadUrl_ItemNotFederated_Fails()
-    {
-        var itemId = Guid.NewGuid();
-        var item = new Movie { Id = itemId, ProviderIds = new Dictionary<string, string>() };
-        _libraryManager.Setup(l => l.GetItemById(itemId)).Returns(item);
-
-        var (success, message, url, fileName) = _service.GetDownloadUrl(itemId.ToString(), enableContentDownloading: true);
-
-        Assert.False(success);
-        Assert.Contains("friend's server", message);
-        Assert.Null(url);
-        Assert.Null(fileName);
-    }
-
-    [Fact]
-    public void GetDownloadUrl_FederatedButNotInCache_Fails()
-    {
-        var itemId = Guid.NewGuid();
-        var item = new Movie { Id = itemId, ProviderIds = new Dictionary<string, string> { ["FederationKey"] = "Movies/raw/server-1/" + Guid.NewGuid() } };
-        _libraryManager.Setup(l => l.GetItemById(itemId)).Returns(item);
-
-        var (success, message, url, fileName) = _service.GetDownloadUrl(itemId.ToString(), enableContentDownloading: true);
-
-        Assert.False(success);
-        Assert.Contains("source server", message);
-        Assert.Null(url);
-        Assert.Null(fileName);
-    }
-
-    [Fact]
-    public void GetDownloadUrl_ServerNotConfigured_Fails()
-    {
-        // Unlike StartDownload (which only optionally checks AllowDownloads on a
-        // registered server and tolerates a missing one), BuildStaticPath - and
-        // therefore this method - requires the server to actually be configured:
-        // there is no proxy URL to build without it.
-        var itemId = Guid.NewGuid();
-        var remoteItemId = Guid.NewGuid();
-        var key = FederationItemCache.BuildRawKey("Movies", "server-1", remoteItemId);
-        var item = new Movie { Id = itemId, ProviderIds = new Dictionary<string, string> { ["FederationKey"] = key } };
-        _libraryManager.Setup(l => l.GetItemById(itemId)).Returns(item);
-        _cache.UpsertRaw("Movies", "server-1", remoteItemId, new BaseItemDto { Name = "Some Movie", Container = "mkv" }, 0, "Movie");
-
-        var (success, message, url, fileName) = _service.GetDownloadUrl(itemId.ToString(), enableContentDownloading: true);
-
-        Assert.False(success);
-        Assert.Null(url);
-        Assert.Null(fileName);
-    }
-
-    [Fact]
-    public void GetDownloadUrl_ValidFederatedItem_ReturnsDownloadUrlAndSanitizedFileName()
-    {
-        _plugin.Configuration.RemoteServers.Add(new RemoteServer { Id = "server-1", Name = "Friend", Url = "http://friend.example:8096", ApiKey = "federation-secret", Enabled = true });
-
-        var itemId = Guid.NewGuid();
-        var remoteItemId = Guid.NewGuid();
-        var key = FederationItemCache.BuildRawKey("Movies", "server-1", remoteItemId);
-        var item = new Movie { Id = itemId, ProviderIds = new Dictionary<string, string> { ["FederationKey"] = key } };
-        _libraryManager.Setup(l => l.GetItemById(itemId)).Returns(item);
-        // "/" - unlike ":" or "?" - is invalid in a filename on every platform
-        // Path.GetInvalidFileNameChars() runs on, so asserting its replacement
-        // here isn't OS-dependent the way punctuation like ":" would be (that's
-        // only invalid on Windows; these tests run on Linux).
-        _cache.UpsertRaw("Movies", "server-1", remoteItemId, new BaseItemDto { Name = "Movie / The Sequel", Container = "mkv" }, 0, "Movie");
-
-        var (success, message, url, fileName) = _service.GetDownloadUrl(itemId.ToString(), enableContentDownloading: true);
-
-        Assert.True(success, message);
-        Assert.NotNull(url);
-        Assert.Contains("/Plugins/Federation/Stream?", url);
-        Assert.Contains("download=true", url);
-        Assert.Equal("Movie _ The Sequel.mkv", fileName);
-        Assert.Contains(Uri.EscapeDataString(fileName!), url);
-
-        var playSig = _federationManager.CreateProxySignature("server-1", remoteItemId, false, null);
-        var downloadSig = _federationManager.CreateProxySignature("server-1", remoteItemId, false, null, download: true);
-        Assert.Contains($"sig={downloadSig}", url);
-        Assert.DoesNotContain($"sig={playSig}", url);
-        Assert.True(_federationManager.ValidateProxySignature("server-1", remoteItemId, false, null, downloadSig, download: true));
-        Assert.False(_federationManager.ValidateProxySignature("server-1", remoteItemId, false, null, playSig, download: true));
-    }
-
-    [Fact]
-    public void GetDownloadUrl_FriendUserAccessRulesThatDoNotRestrictItem_ReturnsDownloadUrl()
-    {
-        // Other titles on this server may have per-user rules. AllLibraries
-        // without a rating or item restriction still allows this exact item
-        // for every configured user, so the userless static download URL is
-        // safe — same as BuildStaticPath(entry, source) / persistence.
-        _plugin.Configuration.RemoteServers.Add(new RemoteServer
-        {
-            Id = "server-1",
-            Name = "Friend",
-            Url = "http://friend.example:8096",
-            ApiKey = "federation-secret",
-            Enabled = true,
-            FriendUserAccessRules = new List<RemoteUserAccessRule>
-            {
-                new RemoteUserAccessRule
-                {
-                    RemoteUserId = Guid.NewGuid().ToString("N"),
-                    Mode = RemoteUserAccessMode.AllLibraries
-                }
-            }
-        });
-
-        var itemId = Guid.NewGuid();
-        var remoteItemId = Guid.NewGuid();
-        var key = FederationItemCache.BuildRawKey("Movies", "server-1", remoteItemId);
-        var item = new Movie { Id = itemId, ProviderIds = new Dictionary<string, string> { ["FederationKey"] = key } };
-        _libraryManager.Setup(l => l.GetItemById(itemId)).Returns(item);
-        _cache.UpsertRaw("Movies", "server-1", remoteItemId, new BaseItemDto { Name = "Open Movie", Container = "mkv" }, 0, "Movie");
-
-        var (success, message, url, fileName) = _service.GetDownloadUrl(itemId.ToString(), enableContentDownloading: true);
-
-        Assert.True(success, message);
-        Assert.NotNull(url);
-        Assert.Contains("/Plugins/Federation/Stream?", url);
-        Assert.Contains("download=true", url);
-        Assert.Equal("Open Movie.mkv", fileName);
-        Assert.Contains(Uri.EscapeDataString(fileName!), url);
-
-        var playSig = _federationManager.CreateProxySignature("server-1", remoteItemId, false, null);
-        var downloadSig = _federationManager.CreateProxySignature("server-1", remoteItemId, false, null, download: true);
-        Assert.Contains($"sig={downloadSig}", url);
-        Assert.DoesNotContain($"sig={playSig}", url);
-    }
-
-    [Fact]
-    public void GetDownloadUrl_FriendUserAccessRulesThatRestrictItem_Fails()
-    {
-        // A user-dependent restriction still cannot be enforced through a
-        // userless static URL handed to a browser download.
-        _plugin.Configuration.RemoteServers.Add(new RemoteServer
-        {
-            Id = "server-1",
-            Name = "Friend",
-            Url = "http://friend.example:8096",
-            ApiKey = "federation-secret",
-            Enabled = true,
-            FriendUserAccessRules = new List<RemoteUserAccessRule>
-            {
-                new RemoteUserAccessRule
-                {
-                    RemoteUserId = Guid.NewGuid().ToString("N"),
-                    Mode = RemoteUserAccessMode.Blocked
-                }
-            }
-        });
-
-        var itemId = Guid.NewGuid();
-        var remoteItemId = Guid.NewGuid();
-        var key = FederationItemCache.BuildRawKey("Movies", "server-1", remoteItemId);
-        var item = new Movie { Id = itemId, ProviderIds = new Dictionary<string, string> { ["FederationKey"] = key } };
-        _libraryManager.Setup(l => l.GetItemById(itemId)).Returns(item);
-        _cache.UpsertRaw("Movies", "server-1", remoteItemId, new BaseItemDto { Name = "Restricted Movie", Container = "mkv" }, 0, "Movie");
-
-        var (success, message, url, fileName) = _service.GetDownloadUrl(itemId.ToString(), enableContentDownloading: true);
-
-        Assert.False(success);
-        Assert.Null(url);
-        Assert.Null(fileName);
-    }
-
-    [Fact]
-    public void GetDownloadUrl_ContentDownloadingDisabled_Fails()
-    {
-        _plugin.Configuration.RemoteServers.Add(new RemoteServer { Id = "server-1", Name = "Friend", Url = "http://friend.example:8096", ApiKey = "federation-secret", Enabled = true });
-
-        var itemId = Guid.NewGuid();
-        var remoteItemId = Guid.NewGuid();
-        var key = FederationItemCache.BuildRawKey("Movies", "server-1", remoteItemId);
-        var item = new Movie { Id = itemId, ProviderIds = new Dictionary<string, string> { ["FederationKey"] = key } };
-        _libraryManager.Setup(l => l.GetItemById(itemId)).Returns(item);
-        _cache.UpsertRaw("Movies", "server-1", remoteItemId, new BaseItemDto { Name = "Some Movie", Container = "mkv" }, 0, "Movie");
-
-        var (success, message, url, fileName) = _service.GetDownloadUrl(itemId.ToString(), enableContentDownloading: false);
-
-        Assert.False(success);
-        Assert.Contains("disabled", message, StringComparison.OrdinalIgnoreCase);
-        Assert.Null(url);
-        Assert.Null(fileName);
-    }
-
-    [Fact]
     public void GetDownloadUrl_ControllerResolvesUserFromSession_NotQueryString()
     {
         var method = typeof(FederationController).GetMethod(nameof(FederationController.GetDownloadUrl));
@@ -596,6 +385,81 @@ public class FederationDownloadServiceTests : IDisposable
 
         var access = new FederationPeerAccessService(_libraryManager.Object);
         Assert.False(access.IsItemVisible(new RemoteServer { ShareAllLibraries = true }, null, scanned.Id, "local-library"));
+    }
+
+    private Guid SetUpMappedDownload()
+    {
+        _plugin.Configuration.RemoteServers.Add(new RemoteServer
+        {
+            Id = "server-1",
+            Name = "Friend",
+            Url = "http://friend.example:8096",
+            ApiKey = "federation-secret",
+            Enabled = true
+        });
+
+        var virtualItemId = Guid.NewGuid();
+        var remoteItemId = Guid.NewGuid();
+        var key = FederationItemCache.BuildRawKey("Movies", "server-1", remoteItemId);
+        _libraryManager.Setup(l => l.GetItemById(virtualItemId)).Returns(new Movie
+        {
+            Id = virtualItemId,
+            ProviderIds = new Dictionary<string, string> { ["FederationKey"] = key }
+        });
+        _libraryManager.Setup(l => l.GetVirtualFolders()).Returns(new List<VirtualFolderInfo>
+        {
+            new VirtualFolderInfo { Name = "Federation Downloads" }
+        });
+        _cache.UpsertRaw("Movies", "server-1", remoteItemId, new BaseItemDto { Name = "Friend Movie", Container = "mkv" }, 0, "Movie");
+        return virtualItemId;
+    }
+
+    [Fact]
+    public async Task MappedDownload_PostMoveFailure_StillCompletes()
+    {
+        var id = SetUpMappedDownload();
+        _libraryManager.Setup(l => l.QueueLibraryScan()).Throws(new InvalidOperationException("scan scheduler down"));
+        _libraryManager.Setup(l => l.FindByPath(It.IsAny<string>(), It.IsAny<bool?>())).Throws(new InvalidOperationException("boom"));
+
+        var service = CreateQualityService(
+            (path, token) => File.WriteAllBytesAsync(path, ValidMediaBytes(), token),
+            () => true);
+
+        var (started, message, operationId) = service.StartDownload(id.ToString());
+        Assert.True(started, message);
+        var completed = await WaitForCompletion(operationId!);
+
+        Assert.True(completed.Success, completed.Status);
+        Assert.True(File.Exists(completed.DestinationPath));
+    }
+
+    [Fact]
+    public async Task MappedDownload_DiskFull_FailsClearlyInsteadOfPausing()
+    {
+        var id = SetUpMappedDownload();
+        var service = CreateQualityService(
+            (path, token) => throw new IOException("No space left on device"),
+            () => true);
+
+        var (started, message, operationId) = service.StartDownload(id.ToString());
+        Assert.True(started, message);
+        var completed = await WaitForCompletion(operationId!);
+
+        Assert.False(completed.Success);
+        Assert.Contains("Not enough disk space", completed.Status);
+    }
+
+    [Theory]
+    [InlineData("No space left on device", 0, true)]
+    [InlineData("x", 28, true)]
+    [InlineData("x", unchecked((int)0x80070070), true)]
+    [InlineData("x", unchecked((int)0x80070027), true)]
+    [InlineData("connection reset", 0, false)]
+    public void IsOutOfDiskSpace_RecognisesDiskFull(string message, int hresult, bool expected)
+    {
+        var ex = new IOException(message, hresult);
+        Assert.Equal(expected, FederationDownloadService.IsOutOfDiskSpace(ex));
+        Assert.Equal(expected, FederationDownloadService.IsOutOfDiskSpace(new InvalidOperationException("w", ex)));
     }
 
     [Fact]

@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Net.Http.Json;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -332,11 +333,15 @@ namespace Jellyfin.Plugin.Federation.Services
         /// FederationChangeNotifier). False when the friend did not take it,
         /// including a friend whose version has no such endpoint.
         /// </summary>
-        public async Task<bool> NotifyCatalogChangedAsync(CancellationToken cancellationToken = default)
+        public async Task<bool> NotifyCatalogChangedAsync(CancellationToken cancellationToken = default, bool sharingChanged = false)
         {
             try
             {
-                using var response = await _httpClient.PostAsync("/Plugins/Federation/Peer/CatalogChanged", new StringContent(string.Empty), cancellationToken).ConfigureAwait(false);
+                // sharing=true: what we share with them changed, so they must sync
+                // now (no notice spacing) to drop titles they may no longer see.
+                // Older versions ignore the parameter and treat it as a catalog change.
+                var path = sharingChanged ? "/Plugins/Federation/Peer/CatalogChanged?sharing=true" : "/Plugins/Federation/Peer/CatalogChanged";
+                using var response = await _httpClient.PostAsync(path, new StringContent(string.Empty), cancellationToken).ConfigureAwait(false);
                 return response.IsSuccessStatusCode;
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -347,6 +352,304 @@ namespace Jellyfin.Plugin.Federation.Services
             {
                 _logger.LogDebug(ex, "[Federation] Could not send a change notice to {ServerName}", _server.Name);
                 return false;
+            }
+        }
+
+        /// <summary>
+        /// The conversion log of a play this friend converts for one of our
+        /// viewers (<c>Peer/PlayLog</c>), or null when there is none yet, the
+        /// friend doesn't share it, or runs a version without it.
+        /// </summary>
+        public async Task<string?> GetPlayLogAsync(string playSessionId, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                using var response = await _httpClient.GetAsync("/Plugins/Federation/Peer/PlayLog?playSessionId=" + Uri.EscapeDataString(playSessionId), cancellationToken).ConfigureAwait(false);
+                if (response.StatusCode != System.Net.HttpStatusCode.OK)
+                {
+                    return null;
+                }
+
+                return await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "[Federation] Could not get a conversion log from {ServerName}", _server.Name);
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Relays a viewer's pause ping ("ping") or stop ("stop") for a session the
+        /// friend is converting (remote-transcode handoff; see <c>Peer/PlayControl</c>).
+        /// Best effort: false on any failure.
+        /// </summary>
+        public async Task<bool> SendPlayControlAsync(string playSessionId, string action, bool? isPaused, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                using var content = new StringContent(
+                    JsonSerializer.Serialize(new { PlaySessionId = playSessionId, Action = action, IsPaused = isPaused }),
+                    System.Text.Encoding.UTF8,
+                    "application/json");
+                using var response = await _httpClient.PostAsync("/Plugins/Federation/Peer/PlayControl", content, cancellationToken).ConfigureAwait(false);
+                return response.IsSuccessStatusCode;
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "[Federation] Could not send a playback {Action} to {ServerName}", action, _server.Name);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// The friend's current per-user rules for this server's own users (see
+        /// <c>Peer/UserRules</c>). Pulled on every sync so a rule push that was
+        /// lost (friend offline, restart, older version at the time) can never
+        /// leave this server enforcing a stale copy. Returns
+        /// <see cref="PeerUserRulesResult.Unsupported"/> for a friend running a
+        /// version without the endpoint and null when the request failed; neither
+        /// may clear the rules already stored.
+        /// </summary>
+        public async Task<PeerUserRulesResult?> GetUserRulesAsync(CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                using var response = await _httpClient.GetAsync("/Plugins/Federation/Peer/UserRules", cancellationToken).ConfigureAwait(false);
+                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    return PeerUserRulesResult.Unsupported;
+                }
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    return null;
+                }
+
+                var content = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+                var body = JsonSerializer.Deserialize<PeerUserRulesBody>(content, JsonOpts);
+                return body?.Rules == null ? null : new PeerUserRulesResult(true, body.Rules, body.AllowDownloads, body.ShareFavorites);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "[Federation] Could not read {ServerName}'s per-user rules", _server.Name);
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Sends one watch-party message to the friend (<c>Peer/Party/...</c>). Returns
+        /// the HTTP status, or 0 when the friend couldn't be reached. Never throws
+        /// except on cancellation.
+        /// </summary>
+        public Task<int> PostPartyAsync(string relativePath, object body, CancellationToken cancellationToken = default)
+            => PostPeerAsync("Party/" + relativePath.TrimStart('/'), body, cancellationToken);
+
+        /// <summary>
+        /// Reads a small JSON document from the friend's <c>Peer/{relativePath}</c>.
+        /// Returns the HTTP status (0 when unreachable) and the body on 200.
+        /// </summary>
+        public async Task<(int Status, T? Body)> GetPeerJsonAsync<T>(string relativePath, CancellationToken cancellationToken = default)
+            where T : class
+        {
+            try
+            {
+                using var request = new HttpRequestMessage(HttpMethod.Get, "/Plugins/Federation/Peer/" + relativePath.TrimStart('/'));
+                using var response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
+                var status = (int)response.StatusCode;
+                if (status != 200)
+                {
+                    return (status, null);
+                }
+
+                var body = await response.Content.ReadFromJsonAsync<T>(PartyJson, cancellationToken).ConfigureAwait(false);
+                return (status, body);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "[Federation] Could not read Peer/{Path} from {ServerName}", relativePath, _server.Name);
+                return (0, null);
+            }
+        }
+
+        /// <summary>
+        /// Posts a small JSON message to the friend's <c>Peer/{relativePath}</c>.
+        /// Returns the HTTP status, or 0 when the friend couldn't be reached.
+        /// </summary>
+        public async Task<int> PostPeerAsync(string relativePath, object body, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                using var request = new HttpRequestMessage(HttpMethod.Post, "/Plugins/Federation/Peer/" + relativePath.TrimStart('/'))
+                {
+                    Content = new StringContent(JsonSerializer.Serialize(body, PartyJson), System.Text.Encoding.UTF8, "application/json")
+                };
+                using var response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
+                return (int)response.StatusCode;
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "[Federation] Could not reach {ServerName} at Peer/{Path}", _server.Name, relativePath);
+                return 0;
+            }
+        }
+
+        /// <summary>
+        /// Posts JSON to the friend's <c>Peer/{relativePath}</c> and reads a JSON
+        /// answer. Status 0 when the friend couldn't be reached; the body is null
+        /// unless the friend answered 2xx with readable JSON.
+        /// </summary>
+        public async Task<(int Status, T? Body)> PostPeerForJsonAsync<T>(string relativePath, object body, CancellationToken cancellationToken = default)
+            where T : class
+        {
+            try
+            {
+                using var request = new HttpRequestMessage(HttpMethod.Post, "/Plugins/Federation/Peer/" + relativePath.TrimStart('/'))
+                {
+                    Content = new StringContent(JsonSerializer.Serialize(body, JsonOpts), System.Text.Encoding.UTF8, "application/json")
+                };
+                using var response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
+                if (!response.IsSuccessStatusCode)
+                {
+                    return ((int)response.StatusCode, null);
+                }
+
+                var text = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+                try
+                {
+                    return ((int)response.StatusCode, JsonSerializer.Deserialize<T>(text, JsonOpts));
+                }
+                catch (JsonException)
+                {
+                    return ((int)response.StatusCode, null);
+                }
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "[Federation] Could not reach {ServerName} at Peer/{Path}", _server.Name, relativePath);
+                return (0, null);
+            }
+        }
+
+        /// <summary>
+        /// The titles the friend's users favorited that this server's viewer
+        /// <paramref name="localUserId"/> may see (see <c>Peer/Favorites</c>). Null
+        /// when the request failed; <c>Shared = false</c> with null items for a
+        /// friend running a version without the endpoint.
+        /// </summary>
+        public async Task<PeerFavoritesBody?> GetFavoritesAsync(string localUserId, string? localUserName, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                using var request = new HttpRequestMessage(HttpMethod.Get, "/Plugins/Federation/Peer/Favorites");
+                request.Headers.TryAddWithoutValidation(RemoteUserIdHeader, localUserId);
+                if (!string.IsNullOrEmpty(localUserName))
+                {
+                    request.Headers.TryAddWithoutValidation(RemoteUserNameHeader, localUserName);
+                }
+
+                using var response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
+                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    return new PeerFavoritesBody { Shared = false, Items = null };
+                }
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    return null;
+                }
+
+                var content = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+                var body = JsonSerializer.Deserialize<PeerFavoritesBody>(content, JsonOpts);
+                if (body == null)
+                {
+                    return null;
+                }
+
+                body.Items ??= new List<PeerFavorite>();
+                return body;
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "[Federation] Could not read {ServerName}'s favorites", _server.Name);
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// The friend's most played titles of the last 30 days that this server's
+        /// viewer <paramref name="localUserId"/> may see (see <c>Peer/Popular</c>).
+        /// Null when the request failed; <c>Shared = false</c> with null items for a
+        /// friend running a version without the endpoint.
+        /// </summary>
+        public async Task<PeerPopularBody?> GetPopularAsync(string localUserId, string? localUserName, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                using var request = new HttpRequestMessage(HttpMethod.Get, "/Plugins/Federation/Peer/Popular");
+                request.Headers.TryAddWithoutValidation(RemoteUserIdHeader, localUserId);
+                if (!string.IsNullOrEmpty(localUserName))
+                {
+                    request.Headers.TryAddWithoutValidation(RemoteUserNameHeader, localUserName);
+                }
+
+                using var response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
+                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    return new PeerPopularBody { Shared = false, Items = null };
+                }
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    return null;
+                }
+
+                var content = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+                var body = JsonSerializer.Deserialize<PeerPopularBody>(content, JsonOpts);
+                if (body == null)
+                {
+                    return null;
+                }
+
+                body.Items ??= new List<PeerPopular>();
+                return body;
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "[Federation] Could not read {ServerName}'s popular titles", _server.Name);
+                return null;
             }
         }
 
@@ -662,9 +965,15 @@ namespace Jellyfin.Plugin.Federation.Services
                 using var doc = JsonDocument.Parse(content);
                 var root = doc.RootElement;
 
-                if (!root.TryGetProperty("Items", out var itemsElement))
+                // Only an explicit Items array is an authoritative "these are the libraries".
+                // A 2xx without it (proxy error page, older/odd peer) is "unknown": an empty
+                // list would make sync treat the friend as sharing nothing and prune everything.
+                if (root.ValueKind != JsonValueKind.Object
+                    || !root.TryGetProperty("Items", out var itemsElement)
+                    || itemsElement.ValueKind != JsonValueKind.Array)
                 {
-                    return new List<BaseItemDto>();
+                    _logger.LogWarning("[Federation] Libraries response from {ServerName} had no Items array; treating the library list as unknown", _server.Name);
+                    return null;
                 }
 
                 var libraries = new List<BaseItemDto>();
@@ -715,10 +1024,10 @@ namespace Jellyfin.Plugin.Federation.Services
         }
 
         /// <summary>
-        /// Gets the friends this server shares with us for friends-of-friends
-        /// discovery: empty when it shares none or has the feature disabled, null
-        /// when it is unreachable or does not run Federation - callers should treat
-        /// null as "could not ask", not as an error worth surfacing.
+        /// Gets this server's friends-of-friends list. Empty when the remote answered
+        /// that it shares none (feature off, or an empty list); null when it is
+        /// unreachable, doesn't run Federation, or the reply is unreadable - callers
+        /// should treat null as "could not ask," not as an error worth surfacing.
         /// </summary>
         public async Task<List<FriendListEntry>?> GetFriendsListAsync(CancellationToken cancellationToken = default)
         {
@@ -732,46 +1041,18 @@ namespace Jellyfin.Plugin.Federation.Services
 
                 var content = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
                 var result = JsonSerializer.Deserialize<FriendsListResponse>(content, JsonOpts);
+                // Only an explicit "no" or a real list means "nothing here"; a reply
+                // missing both fields is garbled, not an answer.
+                if (result?.AllowsIntroductions == false)
+                {
+                    return new List<FriendListEntry>();
+                }
 
-                // Answered but shares nothing (friends-of-friends off, or no
-                // friend shared with us): an empty list, so callers drop what
-                // this friend listed before. Null stays "could not ask".
-                return result?.AllowsIntroductions == true ? result.Friends ?? new List<FriendListEntry>() : new List<FriendListEntry>();
+                return result?.AllowsIntroductions == true ? result.Friends : null;
             }
             catch (Exception ex)
             {
                 _logger.LogDebug(ex, "[Federation] Could not get friends-of-friends list from {ServerName}", _server.Name);
-                return null;
-            }
-        }
-
-        /// <summary>
-        /// Gets this friend's popularity list (their most played titles, counts
-        /// only) if they share it with this server. Returns null when the friend
-        /// cannot be reached, so a network blip never empties a collection; an
-        /// older friend without the endpoint answers as "not shared".
-        /// </summary>
-        public async Task<PopularTitlesResponse?> GetPopularTitlesAsync(CancellationToken cancellationToken = default)
-        {
-            try
-            {
-                using var response = await _httpClient.GetAsync("/Plugins/Federation/Peer/Popular", cancellationToken).ConfigureAwait(false);
-                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
-                {
-                    return new PopularTitlesResponse();
-                }
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    return null;
-                }
-
-                var content = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-                return JsonSerializer.Deserialize<PopularTitlesResponse>(content, JsonOpts) ?? new PopularTitlesResponse();
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
-            {
-                _logger.LogDebug(ex, "[Federation] Could not get the popularity list from {ServerName}", _server.Name);
                 return null;
             }
         }
@@ -863,6 +1144,12 @@ namespace Jellyfin.Plugin.Federation.Services
                 if (string.IsNullOrEmpty(result?.Token))
                 {
                     return (null, null);
+                }
+
+                if (purpose == FederationTokenPurpose.Playback)
+                {
+                    PeerTranscodeCapability.Record(_server.Id, result.RemoteTranscode == true);
+                    PeerTranscodeCapability.RecordSharedSegments(_server.Id, result.SharedSegments == true);
                 }
 
                 if (purpose != FederationTokenPurpose.Playback
@@ -1116,6 +1403,88 @@ namespace Jellyfin.Plugin.Federation.Services
         }
 
         /// <summary>
+        /// Asks the friend for a Download token bound to one of this server's
+        /// viewers, for saving a title to their own device. The friend applies its
+        /// download consent and its per-viewer rules to that viewer. Never throws
+        /// except on cancellation; a refusal carries the friend's own reason.
+        /// </summary>
+        public async Task<DeviceDownloadToken> GetDeviceDownloadTokenAsync(
+            string remoteItemId,
+            string localUserId,
+            string? localUserName,
+            CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                using var request = new HttpRequestMessage(HttpMethod.Post, "/Plugins/Federation/PlaybackToken")
+                {
+                    Content = new StringContent(
+                        JsonSerializer.Serialize(new { ItemId = remoteItemId, Purpose = "Download" }),
+                        System.Text.Encoding.UTF8,
+                        "application/json")
+                };
+                request.Headers.TryAddWithoutValidation(RemoteUserIdHeader, localUserId);
+                if (!string.IsNullOrEmpty(localUserName))
+                {
+                    request.Headers.TryAddWithoutValidation(RemoteUserNameHeader, localUserName);
+                }
+
+                using var response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
+                var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+                if (!response.IsSuccessStatusCode)
+                {
+                    string? error = null;
+                    int? retryAfter = null;
+                    try
+                    {
+                        var parsed = JsonSerializer.Deserialize<DownloadTokenErrorResponse>(body, JsonOpts);
+                        error = parsed?.Error;
+                        retryAfter = parsed?.RetryAfterSeconds;
+                    }
+                    catch (JsonException)
+                    {
+                        // A proxy's HTML error page; the stable message below is used.
+                    }
+
+                    var status = (int)response.StatusCode;
+                    return DeviceDownloadToken.Refused(
+                        status is 403 or 404 or 429 ? status : 502,
+                        error ?? (status == 403 || status == 404
+                            ? $"{_server.Name} doesn't allow downloading this title."
+                            : $"{_server.Name} couldn't authorize this download right now."),
+                        retryAfter);
+                }
+
+                var result = JsonSerializer.Deserialize<PlaybackTokenResponse>(body, JsonOpts);
+                if (string.IsNullOrEmpty(result?.Token)
+                    || !string.Equals(result.Purpose, "Download", StringComparison.Ordinal))
+                {
+                    return DeviceDownloadToken.Refused(
+                        502,
+                        $"{_server.Name} runs an older Federation plugin that can't confirm download permission. Ask them to update.",
+                        null);
+                }
+
+                return new DeviceDownloadToken(
+                    result.Token,
+                    result.ExpiresUtc ?? DateTime.UtcNow.AddMinutes(15),
+                    result.DeviceDownload == true,
+                    200,
+                    null,
+                    null);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "[Federation] Could not authorize a device download of {ItemId} from {ServerName}", remoteItemId, _server.Name);
+                return DeviceDownloadToken.Refused(502, $"{_server.Name} couldn't be reached to authorize this download.", null);
+            }
+        }
+
+        /// <summary>
         /// Gets a cached per-user streaming session token (see
         /// <see cref="Api.FederationController.RegisterUserSession"/>), registering
         /// a fresh one if none is cached or the cached one is close to expiry.
@@ -1225,6 +1594,32 @@ namespace Jellyfin.Plugin.Federation.Services
         }
 
         /// <summary>
+        /// Drops every token this server holds from <paramref name="serverId"/>
+        /// (item playback tokens and viewer session tokens). Used when the friend
+        /// refuses one: after a restart a friend before 0.0.193 forgets every token
+        /// it gave out, and reusing cached ones would refuse every play until they
+        /// ran out.
+        /// </summary>
+        public static void InvalidatePlaybackTokens(string serverId)
+        {
+            if (string.IsNullOrEmpty(serverId))
+            {
+                return;
+            }
+
+            var prefix = serverId + ":";
+            foreach (var key in ItemPlaybackTokenCache.Keys.Where(k => k.StartsWith(prefix, StringComparison.Ordinal)).ToList())
+            {
+                ItemPlaybackTokenCache.TryRemove(key, out _);
+            }
+
+            foreach (var key in UserSessionTokenCache.Keys.Where(k => k.StartsWith(prefix, StringComparison.Ordinal)).ToList())
+            {
+                UserSessionTokenCache.TryRemove(key, out _);
+            }
+        }
+
+        /// <summary>
         /// Drops every static cache entry keyed to a server id (playback info,
         /// peer status, session tokens, capability probes). Called when the server
         /// is removed from configuration so removal - and any later re-friend with
@@ -1263,7 +1658,7 @@ namespace Jellyfin.Plugin.Federation.Services
         // long-lived client (mirroring FederationStreamHandler's DefaultProxyHttpClient)
         // avoids either lengthening the shared client's timeout (which would let a
         // hung metadata call block for hours) or timing out large downloads.
-        private static readonly HttpClient DownloadHttpClient = new HttpClient { Timeout = TimeSpan.FromHours(6) };
+        private static readonly HttpClient DownloadHttpClient = new HttpClient(FederationHttp.Handler()) { Timeout = TimeSpan.FromHours(6) };
 
         /// <summary>
         /// Downloads a remote item's whole media file straight to local disk. Separate
@@ -1311,9 +1706,15 @@ namespace Jellyfin.Plugin.Federation.Services
             }
 
             var url = $"{RemoteServerClientFactory.EffectiveUrl(_server)}/Plugins/Federation/DirectStream/{itemId}?token={Uri.EscapeDataString(token)}&download=true";
+
+            // Over the direct link when it's up: a friend behind a slow tunnel
+            // sends the file at its home speed. A resumed download may switch
+            // between the two; both serve the same bytes.
+            HttpClient? link = null;
+            var viaLink = DirectLink.DirectLinkManager.Current is { } links && links.TryGetClient(_server.Id, out link);
             await DownloadTransfer.CopyUrlToFileAsync(
-                DownloadHttpClient,
-                url,
+                viaLink ? link! : DownloadHttpClient,
+                viaLink ? DirectLink.DirectLinkRelay.ToLinkUri(url).ToString() : url,
                 destinationPath,
                 resumeFrom,
                 progress,
@@ -1327,7 +1728,9 @@ namespace Jellyfin.Plugin.Federation.Services
         {
             try
             {
-                var response = await _httpClient.GetAsync("/System/Info/Public", cancellationToken).ConfigureAwait(false);
+                // A paired friend's link carries only Federation's own friend routes.
+                var path = _server.Paired ? "/Plugins/Federation/Peer/SystemInfo" : "/System/Info/Public";
+                var response = await _httpClient.GetAsync(path, cancellationToken).ConfigureAwait(false);
                 response.EnsureSuccessStatusCode();
                 return true;
             }
@@ -1377,6 +1780,13 @@ namespace Jellyfin.Plugin.Federation.Services
 
         private async Task<FederationPeerStatus> ProbeFederationPeerStatusAsync(CancellationToken cancellationToken)
         {
+            // Pairing only works between two Federation servers, and the link carries
+            // only Federation's friend routes (not the admin page this probe uses).
+            if (_server.Paired)
+            {
+                return FederationPeerStatus.Installed;
+            }
+
             System.Net.HttpStatusCode statusCode;
             try
             {
@@ -1583,7 +1993,19 @@ namespace Jellyfin.Plugin.Federation.Services
             double elapsed = 0;
             while (elapsed < maxMeasureSeconds)
             {
-                var read = await body.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
+                int read;
+                try
+                {
+                    read = await body.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException) when (measured >= 1_000_000 && nowSeconds() - start > 0)
+                {
+                    // The caller's deadline hit on a very slow link: keep what was
+                    // timed so far rather than throw a usable reading away.
+                    elapsed = nowSeconds() - start;
+                    break;
+                }
+
                 if (read == 0)
                 {
                     break;
@@ -1746,7 +2168,7 @@ namespace Jellyfin.Plugin.Federation.Services
                             // Same reasoning as FederationMediaSourceProvider.FetchRemoteSourceAsync:
                             // the remote's per-stream Path is a path on *its* filesystem,
                             // meaningless (and needlessly disclosing) here.
-                            stream.Path = null;
+                            FederationLibraryManager.RedactStreamPath(stream);
                         }
 
                         item.MediaStreams = streams.ToArray();
@@ -1980,7 +2402,10 @@ namespace Jellyfin.Plugin.Federation.Services
 
         private static HttpClient CreateDefaultHttpClient(RemoteServer server)
         {
-            var client = new HttpClient
+            // The token rides as a default header, so stock redirect following would
+            // resend it to whatever host an answer names. TokenRedirect.FollowHandler
+            // follows only same-site hops.
+            var client = new HttpClient(new TokenRedirect.FollowHandler())
             {
                 BaseAddress = new Uri(RemoteServerClientFactory.EffectiveUrl(server)),
                 Timeout = TimeSpan.FromMinutes(5)
@@ -2011,6 +2436,8 @@ namespace Jellyfin.Plugin.Federation.Services
         // wasted a full remote round trip that could never succeed, then fell back
         // to local ffprobe discovery instead of the fast, accurate codec info the
         // remote had been correctly sending back the whole time.
+        private static readonly JsonSerializerOptions PartyJson = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+
         private static readonly JsonSerializerOptions JsonOpts = new()
         {
             PropertyNameCaseInsensitive = true,
@@ -2080,11 +2507,54 @@ namespace Jellyfin.Plugin.Federation.Services
 
         /// <summary>Purpose echoed by newer peers for download-consent verification.</summary>
         public string? Purpose { get; set; }
+
+        /// <summary>
+        /// Whether this Playback token also opens the friend's remote-transcode
+        /// gateway (<c>Peer/Play</c>). Absent (null) from older friends.
+        /// </summary>
+        public bool? RemoteTranscode { get; set; }
+
+        /// <summary>
+        /// Whether the friend's <c>DirectStream?download=true</c> names the file
+        /// itself, so a viewer can be sent there directly. Absent from older friends.
+        /// </summary>
+        public bool? DeviceDownload { get; set; }
+
+        /// <summary>
+        /// Whether the friend's gateway shares a repeated segment request with the
+        /// running one (0.0.193+), so starting its conversion early is safe.
+        /// </summary>
+        public bool? SharedSegments { get; set; }
     }
 
     internal sealed class DownloadTokenErrorResponse
     {
         public string? Error { get; set; }
+
+        public int? RetryAfterSeconds { get; set; }
+    }
+
+    /// <summary>
+    /// A friend's answer to a device-download request (see
+    /// <see cref="RemoteServerClient.GetDeviceDownloadTokenAsync"/>).
+    /// </summary>
+    /// <param name="Token">The item- and viewer-scoped Download token; null when refused.</param>
+    /// <param name="ExpiresUtc">When the token stops working.</param>
+    /// <param name="FriendNamesFile">The friend names the file itself, so the viewer can go there directly.</param>
+    /// <param name="Status">200, or the HTTP status to answer the viewer with.</param>
+    /// <param name="Error">The friend's reason for refusing, safe to show the viewer.</param>
+    /// <param name="RetryAfterSeconds">When the friend's download limit frees up.</param>
+    public sealed record DeviceDownloadToken(
+        string? Token,
+        DateTime ExpiresUtc,
+        bool FriendNamesFile,
+        int Status,
+        string? Error,
+        int? RetryAfterSeconds)
+    {
+        /// <summary>A refusal.</summary>
+        public static DeviceDownloadToken Refused(int status, string error, int? retryAfterSeconds)
+            => new(null, DateTime.MinValue, false, status, error, retryAfterSeconds);
     }
 
     /// <summary>
@@ -2116,37 +2586,15 @@ namespace Jellyfin.Plugin.Federation.Services
     }
 
     /// <summary>
-    /// Response to a <c>GET /Plugins/Federation/Peer/Popular</c> request.
-    /// </summary>
-    public class PopularTitlesResponse
-    {
-        /// <summary>Gets or sets a value indicating whether the friend shares its popularity list with this server.</summary>
-        public bool Shared { get; set; }
-
-        /// <summary>Gets or sets the friend's most played titles, most played first.</summary>
-        public List<PopularTitle> Titles { get; set; } = new();
-    }
-
-    /// <summary>One entry in a <see cref="PopularTitlesResponse"/>.</summary>
-    public class PopularTitle
-    {
-        /// <summary>Gets or sets the title's item id on the friend's server.</summary>
-        public string Id { get; set; } = string.Empty;
-
-        /// <summary>Gets or sets how often it was played in the last 30 days.</summary>
-        public int Plays { get; set; }
-    }
-
-    /// <summary>
     /// Response to a <c>GET /Plugins/Federation/Friends/List</c> request.
     /// </summary>
     public class FriendsListResponse
     {
         /// <summary>Gets or sets a value indicating whether the responding server allows friends-of-friends discovery.</summary>
-        public bool AllowsIntroductions { get; set; }
+        public bool? AllowsIntroductions { get; set; }
 
         /// <summary>Gets or sets the responding server's own friends.</summary>
-        public List<FriendListEntry> Friends { get; set; } = new();
+        public List<FriendListEntry>? Friends { get; set; }
     }
 
     /// <summary>
@@ -2185,6 +2633,17 @@ namespace Jellyfin.Plugin.Federation.Services
         /// Gets or sets the ID.
         /// </summary>
         public string? Id { get; set; }
+
+        /// <summary>
+        /// Gets or sets the friend's Federation plugin version (null before 0.0.150-ish).
+        /// </summary>
+        public string? FederationPluginVersion { get; set; }
+
+        /// <summary>
+        /// Gets or sets the direct link protocol the friend accepts (0 = none:
+        /// older plugin, switched off, or no QUIC on that server).
+        /// </summary>
+        public int DirectLinkVersion { get; set; }
     }
 
     /// <summary>

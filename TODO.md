@@ -1,11 +1,104 @@
 # Jellyfin Federation — remaining work
 
+## 0.0.199 — friends' addresses out of logs (2026-10-22)
+
+- [x] Public addresses in direct-link and pairing logs, status details and error text shown as a per-run tag; private/LAN/Tailscale kept.
+- [x] Real friend names, home paths and the owner's domain removed from tests, docs and comments (public repo).
+
+## 0.0.198 — pairing codes (beta) and link hardening (2026-10-22)
+
+- [x] Pairing codes, Beta tab, QUIC windows; security review + adversarial pass, all findings fixed (Tests/Adversarial).
+- [x] Direct link: header allowlist; read-ahead playlist cap.
+- [ ] Mutual-friend (mailbox) reconnect; relay tickets for remote viewers of paired friends.
+- [ ] Smaller receive windows on paired links; Windows MsQuic.
+
+## 0.0.197 — relay read-ahead (2026-10-22)
+
+- [x] Direct-link relay fetches the player's next 3 segments over the link (one download to friendflix stopped near 110 Mbps; four at once 178).
+- [ ] Live: one-at-a-time playback speed to friendflix with read-ahead.
+- [ ] Read-ahead for the Proxy streaming path.
+
+## 0.0.196 — direct links released as beta, opt-in (2026-10-22)
+
+- [x] Opt-in (`DirectLinkOptIn`, default off; 0.0.195's saved `EnableDirectLink` ignored), Beta badge, switch at the top of the Friends tab.
+- [x] Dial back as soon as a friend links in (live: friendflix linked 14:21, our side waited until 14:34).
+- [x] Live on 0.0.195 between this server and friendflix: both directions up, 115 Mbps, both routers cone.
+- [ ] Live: a home viewer play over the link ("comes over the direct link to this home viewer" in the log).
+- [ ] Optional private relay through a friend's own VPS (UDP forward) for friends who keep their home address hidden.
+- [ ] Hide friends' home addresses from logs and the status page.
+
+## 0.0.195 (test build, branch `test-branch-udp-connection`) — direct links (2026-10-22)
+
+- [x] Friend-to-friend direct link: STUN + UDP hole punching, QUIC with pinned mutual TLS + session proof,
+      HTTP/1.1 per QUIC stream; only Peer/Play, DirectStream and Peer/BitrateTest carried (`docs/DIRECT-LINK.md`).
+- [x] QUIC runs in a private AssemblyLoadContext with the bundled MsQuic 2.6.3 (Jellyfin caches "no QUIC" before plugins load).
+- [x] Home-network viewers get handed-off video through `DirectLink/{serverId}/...` on this server; others go to the friend.
+- [x] Library downloads from a friend over the link; Friends tab status/mode/retry; Advanced switch; Playback Info row.
+- [x] Sonnet security review + ultra review: all findings fixed (`edeaf92`, `0d4d16b`).
+- [x] Two-home NAT harness `scripts/federation_directlink_smoke.py` (cone connects ~1.2–1.4 Gbps; symmetric both sides falls back).
+- [ ] Live: install on this server and friendflix (both need 0.0.195); check Friends tab "Connected · N Mbps" and Playback Info.
+- [ ] Live: does rootless Podman (pasta) keep UDP ports for punching here? Is friendflix's VPS a full tunnel / are they behind CGNAT?
+- [ ] Windows servers (MsQuic ships with .NET there; needs testing + firewall prompt). IPv6 candidates.
+- [ ] Merge to master after a day or two of real use.
+
+## 0.0.194 — data limits, Popular on friends' servers, direct downloads, review fixes (2026-10-21)
+
+- [x] Per-friend monthly GB and simultaneous-stream limits on the owner, counted on DirectStream and the
+      Peer/Play gateway (adapted from svoeth's PR #3; its activity card, user hiding and collections not taken).
+- [x] "Popular on <friend>" Home rows: distinct local users' plays of the owner's own titles, last 30 days.
+- [x] Device downloads redirect straight to the friend (https rebuilt for http-configured friends).
+- [x] WAN speed test: cap never above the measured speed (live: "Slowpoke Jellyfin" measures 1–7 Mbps and was capped at 10).
+- [x] Fixes from the 2026-10-21 review (`~/Documents/federation-review-2026-10-21/`): rating scales, corrupt-cache
+      mass delete, `{}` library prune, disk full, batch image tokens, segment hot path, pool/discovery address checks,
+      token never sent to another host on redirect, web rescans and stuck progress.
+- [x] Gate twice (1215 plugin / 170 Companion / 139 web); two-server peer 9/9, handoff 9/9, party 8/8 on 12.2.
+- [ ] Live checks: a cap reached mid-HLS and mid-download; an apex→www friend redirect; first Popular load on a big
+      library; a client that omits PlaySessionId with a transcode limit set; friendflix's WAN classification (new Info line).
+- [ ] PR #3: reply to svoeth (split into small PRs: end dates + preview, friends-of-friends control).
+
+## 0.0.189 — watch parties with friends (2026-10-20)
+
+- [x] SyncPlay groups across servers: "New group with friends" / "Invite friends" in the group menu;
+      friends' viewers join from their normal group list; each server plays its own copy.
+- [x] Play/pause/seek/title changes shared; loading or buffering anywhere pauses everyone (Wait/Go handshake).
+- [x] Two-server test with scripted SyncPlay players: 8 stages incl. reversed roles, second joiner, title change.
+- [ ] Real-world check with real apps (web, Android) once both friends run 0.0.189.
+- [ ] Not covered: friends of friends (a party only reaches the host's direct friends), Plex/Companion sources.
+
+## 0.0.188 — downloads to device and friends' favorites (2026-10-19)
+
+- [x] Any viewer can download a friend's title with their app's own Download button (web, Android,
+      Findroid, Swiftfin): CanDownload is reported for friends' files, `/Items/{id}/Download` sends the
+      app straight to the friend (named file, viewer-bound permit) or relays when it must.
+- [x] Fixed: the old web-only "Download to device" handed browsers this server's loopback address
+      (never worked off the server itself) and refused every title once any per-user rule existed.
+- [x] Friend download consent covers viewers (friend switch + per-viewer rule), with a per-viewer allowance.
+- [x] Friends' favorites: "Favorites on (friend)" rows on the Favorites tab; titles only, per-viewer visibility.
+- [ ] Real-world check once both friends run 0.0.188 (older friends: downloads are relayed, no favorites row).
+- [ ] Not covered: Plex/Companion sources (no Download button), native-app favorites rows (web only).
+
+## 0.0.187 — remote-transcode handoff and access that hides (2026-10-19)
+
+Branch `feature/direct-play-and-access`.
+
+- [x] Remote-transcode handoff: a viewer signed in here plays a friend's title that must be
+  converted; the friend's server converts its own file and streams it straight to the player
+  (`Peer/Play/{token}/...` gateway, `FederationRemoteTranscodeFilter`, session bridge for pause/stop).
+  Falls back to converting here when the friend can't. Two-server proof: `scripts/federation_handoff_smoke.py`.
+- [x] Friend per-user rules hide titles (native BlockedTags + per-user hide tag), not only refuse playback.
+  Receiver pulls its rules from each friend every sync (`Peer/UserRules`).
+- [x] Unsharing a library removes it from the friend at once (sharing notice skips spacing; revoked
+  libraries prune without the glitch brakes). Proof: `scripts/federation_peer_smoke.py`.
+- [x] Fixed: transcoding a friend title with an external subtitle on the receiving server failed
+  (stream index shifted by the redacted sidecar path).
+- [ ] Real-world check on the user's servers (both friends must run 0.0.187 for the handoff and the
+  rule pull; the hiding of already-pushed rules works with older friends).
+- [ ] Not covered yet: Plex/Companion sources (always converted here), adaptive web player, live TV.
+
 ## Top priority — major streaming redesign and federated watch parties
 
 **Scope clarification: Jellyfin-to-Jellyfin only for this phase.** User reports
-30–60+ seconds to start, depending on quality/codec. Detailed architecture map,
-phased implementation, proposed performance targets, access rules and rollout:
-[STREAMING_REDESIGN.md](STREAMING_REDESIGN.md).
+30–60+ seconds to start, depending on quality/codec.
 
 - [x] Map current playback path and write the phased redesign/party plan.
 - [x] Initial code: coordinate duplicate metadata requests, isolate cache by viewer/address/credential, add metadata and first-body-write debug timing. Four focused regressions pass; not yet a measured end-to-end speed improvement.
@@ -20,7 +113,7 @@ User request (2026-09-06): federated content takes too long to start. Treat this
 - [ ] Map the complete playback architecture and propose the replacement design: source selection, metadata, authorization, transport/relay, Plex media mounts, buffering, transcoding, session lifecycle and watch-party synchronization. Document migration, compatibility and rollback before implementation; unrelated plugin systems are outside this rebuild unless a concrete dependency requires changes.
 - [ ] Measure Jellyfin-to-Jellyfin startup before changing the architecture: metadata lookup, authorization/token requests, source connection, first byte, client buffering and transcoding. Include controlled WAN conditions and the actual connection when available; Plex/Companion redesign is deferred.
 - [ ] Remove measured startup bottlenecks and unnecessary requests/hops while preserving current sharing checks, credential isolation, Range/seek behavior, cancellation and source fallback. Record comparable before/after timings; do not assume larger buffers improve startup.
-- [ ] Design and implement watch parties for federated content: assess Jellyfin SyncPlay integration first, then define supported clients and same-server versus cross-server participation, invitations, synchronized play/pause/seek, late joining and reconnects.
+- [x] (0.0.189) Design and implement watch parties for federated content: assess Jellyfin SyncPlay integration first, then define supported clients and same-server versus cross-server participation, invitations, synchronized play/pause/seek, late joining and reconnects.
 - [ ] Require each participant to have their own authorized access to the source media. Party membership must never grant access to another friend's imported library, expose credentials or bypass revoked sharing.
 - [ ] Test concurrent viewers, slow connections, buffering, seeking, disconnects, source outages and access revocation with bounded resource use. Keep independent playback reliable when party members stall or leave.
 - [ ] Keep this checklist updated with measured findings, implementation progress, validation evidence and remaining limitations so another model can take over safely. Do not publish streaming architecture changes before focused regressions and the applicable live playback matrix pass.
@@ -30,7 +123,7 @@ Completed work is removed from this file. Git history and GitHub releases keep t
 ## Fast federated playback start (target: 4-30 s from click)
 
 Findings (measured 2026-10-03, live server): start time is roughly `6 s x file bitrate / link speed`.
-Jellyfin serves the first HLS segment only once the next exists (2 x 3 s of source). freakbob (Plex, Proxy
+Jellyfin serves the first HLS segment only once the next exists (2 x 3 s of source). plexpal (Plex, Proxy
 mode) delivers ~8 Mbps whatever the connection count, so a 93 Mbps remux takes ~75 s. The transcode broker
 already trims ffmpeg's probe to 1 s / 1 MB on the Windows GPU box, so the analysis-window change is harmless but
 does not help this setup. Fewer bytes from the friend's side is the only fix for link-bound titles.
@@ -41,7 +134,7 @@ Done
 - [x] Persist stream info when a source reports duplicate stream indexes (avoids Jellyfin's slow first-play probe).
 
 In progress
-- [x] Link-speed measurement: daily, on new server, on reconnect; Jellyfin peers and Plex (consented files only). Live: freakbob measured 7.1-7.6 Mbps automatically.
+- [x] Link-speed measurement: daily, on new server, on reconnect; Jellyfin peers and Plex (consented files only). Live: plexpal measured 7.1-7.6 Mbps automatically.
 
 Loading experience
 - [x] Start-time estimator and `GET /Plugins/Federation/StartEstimate/{itemId}` with tests. Live check: 93 Mbps title projected 78 s vs 75-85 s measured.
@@ -51,15 +144,15 @@ Loading experience
 - [x] Timing logs: media-source resolution time and slow upstream responses (`[Federation][timing]`). Still wanted: time to first segment.
 
 Real speed-up (fewer bytes from the friend)
-- [x] Probe whether freakbob's Plex allows transcoding (`Diagnostics/PlexTranscodeProbe/{itemId}`). Result 2026-10-03: HTTP 403 with an empty body from BOTH Plex's decision call and the transcode call. Cause: `Companion/PlexFederationRelay.cs` is an allowlist (sections, metadata, parts) and answers everything else 403, so the friend's consent scope blocks transcoding.
-- [x] Prefer the faster source for titles on several servers when the first choice would exceed a 30 s start budget (hysteresis, measured sources only). Simulated on the real catalog: 26 of 104 multi-server movies would move to netflix++ once it is online, saving 28-74 s each.
-- [ ] Owner decision needed: Auto WAN cap floor is 10 Mbps (set at the owner's request) but Inspired measures 2.0 Mbps, so its capped stream is 5x too fast for the link. Consider a floor that follows the link.
+- [x] Probe whether plexpal's Plex allows transcoding (`Diagnostics/PlexTranscodeProbe/{itemId}`). Result 2026-10-03: HTTP 403 with an empty body from BOTH Plex's decision call and the transcode call. Cause: `Companion/PlexFederationRelay.cs` is an allowlist (sections, metadata, parts) and answers everything else 403, so the friend's consent scope blocks transcoding.
+- [x] Prefer the faster source for titles on several servers when the first choice would exceed a 30 s start budget (hysteresis, measured sources only). Simulated on the real catalog: 26 of 104 multi-server movies would move to friendflix once it is online, saving 28-74 s each.
+- [ ] Owner decision needed: Auto WAN cap floor is 10 Mbps (set at the owner's request) but Slowpoke measures 2.0 Mbps, so its capped stream is 5x too fast for the link. Consider a floor that follows the link.
 - [ ] Capped Plex stream for link-bound titles. BLOCKED on friend consent: needs an opt-in Companion setting (default off) that lets the relay pass `/video/:/transcode/universal/{decision,start.mkv,stop}` for shared items only, the friend updating Companion and enabling it, then the plugin path (bitrate = min(client max, ~80% of measured link)), original-quality copy kept as a version, seek/resume, audio track and subtitles.
 - [ ] Mid-stream sharpening: multi-level HLS playlist (for example 3 / 8 / original Mbps) so the player starts low and switches up; investigate jellyfin-web / hls.js behaviour and TV native players first.
 - [ ] Optional: warm a title when its detail page opens or the next episode is queued (small capped LRU, no bulk caching).
 
 Diagnosis and release
-- [ ] Diagnose netflix++ (gigabit peer, still slow) once it is online, using the new stage timings.
+- [ ] Diagnose friendflix (gigabit peer, still slow) once it is online, using the new stage timings.
 - [ ] Full gate before publishing: commit on `feature/fast-start`, run the suite twice, two-server ordinary-user/admin matrix, update `manifest.json` / `meta.json` / zip checksum, push, GitHub release (needs GitHub login on this machine).
 - [ ] Rollback if needed: previous plugin folder is in `/config/plugin-backups/Jellyfin Federation_0.0.170` inside the `jellyfin` container.
 
@@ -67,10 +160,7 @@ Diagnosis and release
 
 Companion now ships as a real background app: WinExe + tray on Windows, XDG
 autostart on Linux, single-instance, rotating log, low-memory GC settings, and
-an owner "Companion app" card. Implementation details, remaining platform
-validation, and the exact test commands live in
-[`Companion/DESKTOP-APP-TODO.md`](Companion/DESKTOP-APP-TODO.md). Read that file
-before changing Companion startup, tray, autostart, or packaging.
+an owner "Companion app" card.
 
 ## Active Plex repair — shipped as 0.0.133
 
@@ -134,14 +224,6 @@ remaining live Windows/Funnel/client checks.
 - [ ] Prefer configurable/discovered paths, ports and addresses across Windows/Linux/macOS and containers. Never bake a developer's username, home directory, server address or credentials into shipped code or setup instructions.
 
 - [ ] Before promoting private sharing to stable, verify two separately approved Tailscale server computers: real HTTPS certificates, cross-account access, catalog/HEAD/Range/decoded media, access revocation, restart, direct/DERP behavior and receiving-side imports. Current sandbox uses a simulated network CLI; do not claim real private-network playback yet.
-
-## Friend privacy, limits and activity — shipped as 0.0.196
-
-- [x] Per friend: visible users (none by default), visible friends for discovery (all by default, only with friends-of-friends on), end dates for the friendship and per library, stream/data limits, popularity sharing (off by default) with "Popular on …" collections, "Preview what they see", friend viewing activity (card + Jellyfin activity log) and a Usage tab.
-- [x] 2026-10-20 validation: clean build, 991 .NET tests twice, 3 JS suites; two native Jellyfin 12 servers (`features.py` scenario, temporary under the session scratchpad) 27/27 checks, no Federation errors in either log. Live runs found and fixed: stale Discovery cache on the friend, expired library still streaming (physical folder id), usage lost at shutdown, deleted popular collection re-saved by Jellyfin's queued metadata save.
-- [ ] A refused stream (limit reached, sharing ended) shows on the friend's side as a failed playback; consider a readable reason in their client.
-- [ ] Data limit enforcement is per request: concurrent requests can overshoot a little before the next request is refused.
-- [ ] Friend activity entries have no Jellyfin user, so the dashboard lists them with alerts rather than user activity.
 
 ## Federation state and security
 
