@@ -8,6 +8,14 @@
     "category": "General",
     "versions": [
       {
+        "version": "0.0.200",
+        "changelog": "This version is built on Saintdoggie's upstream 0.0.199, so it brings everything added there since 0.0.186: direct links between friends' servers (beta, off until you turn it on), watch parties with friends, friends converting video for each other, \"Popular on\" and \"Favorites on\" rows on the Home tab, friends' viewers on your dashboard, and many sync, download and playback fixes. On top of that: friends see none of your users unless you share them, you choose which of your friends each friend sees, sharing can end on a date (a whole friend or single libraries), \"Preview what they see\" shows what a friend gets, popular titles and viewer names are shared only if you choose (a default plus a choice per friend; both off on new installs), a friend's conversion log holds only its own conversion, and speed tests count toward a friend's data limit. Coming from this fork's 0.0.196: your sharing choices, end dates and limits are kept and this month's data totals carry over; the Usage tab and the friend activity entries are gone, \"Popular on\" is a Home row instead of a collection (the old collections are removed), and a friend that saw your popular titles needs to be allowed again. Update both servers.",
+        "targetAbi": "12.0.0.0",
+        "timestamp": "2026-10-23T21:37:51Z",
+        "sourceUrl": "https://github.com/svoeth/JellyfinFederationPlugin/releases/download/0.0.200/Jellyfin.Federation.zip",
+        "checksum": "2784b6d64b8d16970fad70bda881d3af"
+      },
+      {
         "version": "0.0.196",
         "changelog": "Privacy and control per friend. A friend no longer sees your users unless you share them (Friends -> Manage -> \"Users they can see\"); rules they already set keep working. Choose which of your friends each friend can discover, set an end date for sharing (the whole friendship or single libraries), and limit simultaneous streams and data per month. \"Preview what they see\" shows exactly what a friend gets. Friends watching your titles now appear on the plugin page and in Jellyfin's activity log, and the new Usage tab shows per-friend totals and the most watched titles. Optionally tell a friend what is popular on your server (play counts only); their server shows it as a \"Popular on ...\" collection. Update both servers.",
         "targetAbi": "12.0.0.0",
@@ -193,7 +201,7 @@
       },
       {
         "version": "0.0.173",
-        "changelog": "Downloads from a Plex source that is offline no longer break the Downloads tab: it now says the server can't be reached, offline servers are marked in the picker, and downloads queued from them wait until it is back. Adds an opt-in adaptive player (Advanced \u2192 off by default) that can switch a movie to another friend's copy mid-play when that copy is clearly more reliable, preparing the new source first and showing a brief 'Switched to <server>' notice. Detail pages show which servers have a title and let you pick one instead of Auto. Learns when each friend's server is usually online and shows a forecast; adds a Log tab with this plugin's recent messages. Includes the Companion private file-sharing preview. UI uses solid colours throughout.",
+        "changelog": "Downloads from a Plex source that is offline no longer break the Downloads tab: it now says the server can't be reached, offline servers are marked in the picker, and downloads queued from them wait until it is back. Adds an opt-in adaptive player (Advanced → off by default) that can switch a movie to another friend's copy mid-play when that copy is clearly more reliable, preparing the new source first and showing a brief 'Switched to <server>' notice. Detail pages show which servers have a title and let you pick one instead of Auto. Learns when each friend's server is usually online and shows a forecast; adds a Log tab with this plugin's recent messages. Includes the Companion private file-sharing preview. UI uses solid colours throughout.",
         "targetAbi": "12.0.0.0",
         "timestamp": "2026-10-07T14:37:03Z",
         "sourceUrl": "https://github.com/svoeth/JellyfinFederationPlugin/releases/download/0.0.173/Jellyfin.Federation.zip",

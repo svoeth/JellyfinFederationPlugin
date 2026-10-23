@@ -5,9 +5,9 @@
   "overview": "The Jellyfin Federation Plugin allows you to create a unified media library by aggregating content from multiple remote Jellyfin servers. Stream content from any server without file synchronization.",
   "owner": "Angablade",
   "category": "General",
-  "version": "0.0.199",
-  "changelog": "Privacy: a friend's home internet address no longer appears in this server's logs or on the status page. Public addresses are shown as a short tag (for example \"public #3f9a2c:51876\") that stays the same for one address while the server runs, so log lines can still be matched up; private, LAN and Tailscale addresses are shown as before for troubleshooting. Error messages that mention an address are cleaned the same way. Your own server's public address is still shown to you on the Beta tab. Pairing codes are disabled in this build while the feature is under review; direct links are unchanged. Includes everything in 0.0.198.",
+  "version": "0.0.200",
+  "changelog": "This version is built on Saintdoggie's upstream 0.0.199, so it brings everything added there since 0.0.186: direct links between friends' servers (beta, off until you turn it on), watch parties with friends, friends converting video for each other, \"Popular on\" and \"Favorites on\" rows on the Home tab, friends' viewers on your dashboard, and many sync, download and playback fixes. On top of that: friends see none of your users unless you share them, you choose which of your friends each friend sees, sharing can end on a date (a whole friend or single libraries), \"Preview what they see\" shows what a friend gets, popular titles and viewer names are shared only if you choose (a default plus a choice per friend; both off on new installs), a friend's conversion log holds only its own conversion, and speed tests count toward a friend's data limit. Coming from this fork's 0.0.196: your sharing choices, end dates and limits are kept and this month's data totals carry over; the Usage tab and the friend activity entries are gone, \"Popular on\" is a Home row instead of a collection (the old collections are removed), and a friend that saw your popular titles needs to be allowed again. Update both servers.",
   "targetAbi": "12.0.0.0",
-  "timestamp": "2026-10-23T17:40:19Z",
+  "timestamp": "2026-10-23T21:37:51Z",
   "imageUrl": "https://raw.githubusercontent.com/Saintdoggie/JellyfinFederationPlugin/master/logo.png"
 }

@@ -61,7 +61,8 @@ Most features can be switched off under the plugin's Advanced tab.
 ## Installation
 
 1. In Jellyfin, go to Dashboard → Plugins → Repositories and add:
-   `https://raw.githubusercontent.com/Saintdoggie/JellyfinFederationPlugin/master/manifest.json`
+   `https://raw.githubusercontent.com/svoeth/JellyfinFederationPlugin/master/manifest.json`
+   (this fork; the original project is at `https://raw.githubusercontent.com/Saintdoggie/JellyfinFederationPlugin/master/manifest.json`)
 2. Install the **Jellyfin Federation** plugin from the catalog.
 3. Restart Jellyfin, then open Dashboard → Plugins → Federation.
 
