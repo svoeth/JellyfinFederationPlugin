@@ -2477,7 +2477,8 @@ test('preview shows what a friend gets, escaped, and says when sharing ended', (
     excludedTitles: ['Secret (2001)'], globallyExcludedCount: 2,
     users: ['anna', 'ben'], friendsOfFriendsEnabled: false, friends: [],
     userRules: [{ name: 'Kid', mode: 'Blocked', maxRating: null, allowDownload: false }],
-    allowDownloads: true, allowBulkDownloads: false, allowRemoteTranscode: true, maxConcurrentStreams: 2, monthlyDataCapGb: 0
+    allowDownloads: true, allowBulkDownloads: false, allowRemoteTranscode: true, maxConcurrentStreams: 2, monthlyDataCapGb: 0,
+    sharePopular: false, shareViewerNames: true
   });
   assert.equal(host.querySelector('b'), null);
   assert.equal(host.querySelector('i'), null);
@@ -2493,6 +2494,7 @@ test('preview shows what a friend gets, escaped, and says when sharing ended', (
   assert.match(text, /Kid — blocked, no downloads/);
   assert.match(text, /Single downloads allowed · you convert video for them · up to 2 streams at once · no data limit/);
   assert.match(text, /stay shared until/);
+  assert.match(text, /no data limit · doesn't see what is popular here · sees your viewers' names/);
 
   const ended = api.renderFriendPreview({ success: true, name: 'Pal', expired: true, expiresUtc: '2020-01-01T00:00:00Z', libraries: [] });
   assert.match(ended, /Sharing ended on .*: they see none of your libraries/);

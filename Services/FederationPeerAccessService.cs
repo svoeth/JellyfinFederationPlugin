@@ -33,6 +33,11 @@ namespace Jellyfin.Plugin.Federation.Services
         /// </summary>
         public static bool IsUserVisible(RemoteServer caller, Guid userId)
         {
+            if (IsSharingExpired(caller))
+            {
+                return false;
+            }
+
             if (caller.ShareAllUsers)
             {
                 return true;
@@ -395,7 +400,8 @@ namespace Jellyfin.Plugin.Federation.Services
         /// </summary>
         public static bool IsFriendVisible(RemoteServer caller, RemoteServer other)
         {
-            if (!other.Enabled
+            if (IsSharingExpired(caller)
+                || !other.Enabled
                 || other.Kind != ServerKind.Jellyfin
                 || other.Paired
                 || string.Equals(other.Id, caller.Id, StringComparison.Ordinal))

@@ -332,7 +332,9 @@ namespace Jellyfin.Plugin.Federation.Services
                 {
                     if (File.Exists(path))
                     {
-                        var read = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, long>>>(File.ReadAllText(path));
+                        var text = File.ReadAllText(path);
+                        var read = ForkUpgradeCleanup.ReadForkUsage(text, FederationIdOfFriend)
+                            ?? JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, long>>>(text);
                         if (read != null)
                         {
                             foreach (var (friend, months) in read)
@@ -354,6 +356,9 @@ namespace Jellyfin.Plugin.Federation.Services
                 }
             }
         }
+
+        private static string? FederationIdOfFriend(string serverId)
+            => Plugin.Instance?.Configuration?.RemoteServers?.FirstOrDefault(s => s.Id == serverId)?.FederationId;
 
         private void Save()
         {

@@ -2159,6 +2159,8 @@
                             + ' · ' + (p.allowRemoteTranscode ? 'you convert video for them' : 'you don\'t convert video for them')
                             + ' · ' + (p.maxConcurrentStreams ? 'up to ' + p.maxConcurrentStreams + ' streams at once' : 'no stream limit')
                             + ' · ' + (p.monthlyDataCapGb ? p.monthlyDataCapGb + ' GB per month' : 'no data limit')
+                            + (p.sharePopular === undefined ? '' : ' · ' + (p.sharePopular ? 'sees what is popular here' : 'doesn\'t see what is popular here'))
+                            + (p.shareViewerNames === undefined ? '' : ' · ' + (p.shareViewerNames ? 'sees your viewers\' names' : 'doesn\'t see your viewers\' names'))
                             + '</p>';
                         html += '</div>';
                         return html;

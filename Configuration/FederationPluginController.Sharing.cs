@@ -87,14 +87,17 @@ namespace Jellyfin.Plugin.Federation.Api
             var users = new List<string>();
             foreach (var u in EnumerateLocalUsers())
             {
-                if (u.GetType().GetProperty("Username")?.GetValue(u) is string name)
+                var t = u.GetType();
+                if (t.GetProperty("Id")?.GetValue(u) is Guid userId
+                    && t.GetProperty("Username")?.GetValue(u) is string name
+                    && FederationPeerAccessService.IsUserVisible(server, userId))
                 {
                     users.Add(name);
                 }
             }
 
             var friends = config.AllowFriendsOfFriends
-                ? config.RemoteServers.Where(s => s.Enabled).Select(s => s.Name).ToList()
+                ? config.RemoteServers.Where(s => FederationPeerAccessService.IsFriendVisible(server, s)).Select(s => s.Name).ToList()
                 : new List<string>();
 
             return Ok(new
@@ -121,7 +124,9 @@ namespace Jellyfin.Plugin.Federation.Api
                 allowBulkDownloads = server.AllowBulkDownloads && server.AllowDownloads && !expired,
                 allowRemoteTranscode = config.EnableRemoteTranscodeForFriends && server.AllowRemoteTranscode && !expired,
                 maxConcurrentStreams = server.MaxConcurrentStreams,
-                monthlyDataCapGb = server.MonthlyDataCapGb
+                monthlyDataCapGb = server.MonthlyDataCapGb,
+                sharePopular = FederationFriendPopularService.SharesPopularWith(server) && !expired,
+                shareViewerNames = FederationViewerReporter.SharesNamesWith(server)
             });
         }
 
