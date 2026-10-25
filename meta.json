@@ -5,9 +5,9 @@
   "overview": "The Jellyfin Federation Plugin allows you to create a unified media library by aggregating content from multiple remote Jellyfin servers. Stream content from any server without file synchronization.",
   "owner": "Angablade",
   "category": "General",
-  "version": "0.0.200",
-  "changelog": "This version is built on Saintdoggie's upstream 0.0.199, so it brings everything added there since 0.0.186: direct links between friends' servers (beta, off until you turn it on), watch parties with friends, friends converting video for each other, \"Popular on\" and \"Favorites on\" rows on the Home tab, friends' viewers on your dashboard, and many sync, download and playback fixes. On top of that: friends see none of your users unless you share them, you choose which of your friends each friend sees, sharing can end on a date (a whole friend or single libraries), \"Preview what they see\" shows what a friend gets, popular titles and viewer names are shared only if you choose (a default plus a choice per friend; both off on new installs), a friend's conversion log holds only its own conversion, and speed tests count toward a friend's data limit. Coming from this fork's 0.0.196: your sharing choices, end dates and limits are kept and this month's data totals carry over; the Usage tab and the friend activity entries are gone, \"Popular on\" is a Home row instead of a collection (the old collections are removed), and a friend that saw your popular titles needs to be allowed again. Update both servers.",
+  "version": "0.0.201",
+  "changelog": "Fixes friends' titles that never start in a browser (the player keeps loading, the friend sees a viewer at 0:00) when a web server in front of Jellyfin sends broken headers. Your server now checks each friend's server and its own web page for the usual reverse-proxy mistakes: Access-Control-Allow-Origin sent twice, as a list or for the wrong site, Cross-Origin-Resource-Policy blocking your site, and a Content-Security-Policy or Cross-Origin-Embedder-Policy on your own server that leaves friends out. When converted video would be blocked, browsers get it converted on your server instead; every problem is named once in the plugin's Log tab with what to change. Includes everything in 0.0.200.",
   "targetAbi": "12.0.0.0",
-  "timestamp": "2026-10-23T21:37:51Z",
+  "timestamp": "2026-10-25T03:18:50Z",
   "imageUrl": "https://raw.githubusercontent.com/Saintdoggie/JellyfinFederationPlugin/master/logo.png"
 }
