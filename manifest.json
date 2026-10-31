@@ -8,179 +8,123 @@
     "category": "General",
     "versions": [
       {
-        "version": "0.0.207",
-        "changelog": "Playback compatibility and truthful diagnostics. Offers every compatible remote encoding, improves native Jellyfin app support including Android, shares measured capacity between sessions, and recovers web playback through fresh authorized sessions. Playback Info now reports the observed route, play method, conversion location and original/delivered formats instead of guessing Direct Play. Includes everything in 0.0.206.",
+        "version": "0.0.208",
+        "changelog": "Built on Saintdoggie's upstream 0.0.207, so it brings everything added there since 0.0.199: security and transport hardening, adaptive playback from measured connection speed, better phone, tablet and Android app playback, Playback Info that shows the real route, sparse settings saves that no longer erase friends or sharing settings, and the optional Plex add-in (Plex users: install Jellyfin.Plugin.Federation.Plex-0.0.208.zip from this release). On top of that, as proposed upstream in PR #16: friends see none of your users unless you share them, you choose which of your friends each friend sees, sharing can end on a date and the preview shows what a friend gets, popular titles and viewer names are shared only by choice, a friend's conversion log holds only its own conversion, and speed tests count toward a friend's data limit. Fixed: a title could stay refused (403) for up to a day after a friend's server restarted; tokens are now saved at shutdown and session tokens survive restarts. Friends' viewers whose names can't be verified show as \"Someone (friend)\" instead of disappearing from the dashboard. Coming from 0.0.196: this month's data totals carry over and the old \"Popular on\" collections are removed. Update both servers.",
         "targetAbi": "12.0.0.0",
-        "timestamp": "2026-10-29T16:49:20Z",
-        "sourceUrl": "https://github.com/Saintdoggie/JellyfinFederationPlugin/releases/download/0.0.207/Jellyfin.Federation.zip",
-        "checksum": "a0629a429e06d88deeadff2e918dd2f2"
-      },
-      {
-        "version": "0.0.206",
-        "changelog": "Reliability and playback fixes. Sparse configuration saves no longer erase friends, mappings or sharing/privacy settings; friend limits and consent updates preserve omitted values. Rating ceilings now apply through series and seasons to unrated episodes. Capped playback retains audio and text-subtitle choices, universal audio works through the owner gateway, and read-ahead link failures fall back safely. Includes everything in 0.0.205.",
-        "targetAbi": "12.0.0.0",
-        "timestamp": "2026-10-27T04:42:06Z",
-        "sourceUrl": "https://github.com/Saintdoggie/JellyfinFederationPlugin/releases/download/0.0.206/Jellyfin.Federation.zip",
-        "checksum": "13f77e0f88d7a62f4e7a81aaf4ddb617"
-      },
-      {
-        "version": "0.0.205",
-        "changelog": "Security and reliability. Discovery requires an explicit admin request and sharing choice; friend and pool callbacks are authenticated, and pending requests, pools, user rules, party snapshots, availability blobs and urgent sync notices are bounded. Session registration and streaming work again, zero-share friends cannot enumerate users, and administrator reporting is corrected. Upgrade both servers for authenticated friend accept/reject callbacks. Includes everything in 0.0.204.",
-        "targetAbi": "12.0.0.0",
-        "timestamp": "2026-10-26T23:57:55Z",
-        "sourceUrl": "https://github.com/Saintdoggie/JellyfinFederationPlugin/releases/download/0.0.205/Jellyfin.Federation.zip",
-        "checksum": "1f3232cb72cf88e1d673063871330d86"
-      },
-      {
-        "version": "0.0.204",
-        "changelog": "Security hardening. Pool notices require authenticated membership and untrusted roster URLs no longer trigger automatic friend requests or sharing. Internal relay keys are memory-only; friend HTTP responses are bounded and redirects/proxies are disabled. Playback tokens are bounded and rate-limited, and disabling a friend revokes existing access. Pairing and direct links enforce exact peer/endpoint binding and replay protection; viewer reports, segment caches and playlist URLs are hardened. Pairing remains review-locked. Includes everything in 0.0.203.",
-        "targetAbi": "12.0.0.0",
-        "timestamp": "2026-10-26T22:22:28Z",
-        "sourceUrl": "https://github.com/Saintdoggie/JellyfinFederationPlugin/releases/download/0.0.204/Jellyfin.Federation.zip",
-        "checksum": "425696ba2a7f6f286deea661d073a737"
-      },
-      {
-        "version": "0.0.203",
-        "changelog": "Measured adaptive playback. Android and other handheld apps no longer receive a blanket 1080p/13 Mbps conversion: compatible originals can stream at full quality, while necessary conversions use the client's limits and measured link capacity. Federation Auto now retains high-speed capacity, handles sub-10 Mbps links, and caps high-bitrate remuxes instead of disabling its limit above 50 Mbps. Peer speed tests combine three bounded steady-state media-route samples using the median, reject truncated bodies, and retain conservative behavior on failure. Includes everything in 0.0.202.",
-        "targetAbi": "12.0.0.0",
-        "timestamp": "2026-10-26T16:51:41Z",
-        "sourceUrl": "https://github.com/Saintdoggie/JellyfinFederationPlugin/releases/download/0.0.203/Jellyfin.Federation.zip",
-        "checksum": "30194c5c293cae194a996d8bdac92762"
-      },
-      {
-        "version": "0.0.202",
-        "changelog": "App compatibility. Phone and tablet apps (Jellyfin for Android, Findroid, Swiftfin on iPhone and iPad, Streamyfin) now get a friend-converted stream held to 1080p and about 12 Mbps. Before, these apps sent no resolution limit, so a 4K HDR title became a 4K, 30+ Mbps conversion that a friend's server could make slower than real time, and the Android player gave up with a Source error before the first segment. TV apps and the web client are unchanged, and an app's own resolution limit is respected. Includes everything in 0.0.201.",
-        "targetAbi": "12.0.0.0",
-        "timestamp": "2026-10-26T15:07:16Z",
-        "sourceUrl": "https://github.com/Saintdoggie/JellyfinFederationPlugin/releases/download/0.0.202/Jellyfin.Federation.zip",
-        "checksum": "7a4bf0f1803ab107550270ddccdac6b6"
+        "timestamp": "2026-10-31T02:35:51Z",
+        "sourceUrl": "https://github.com/svoeth/JellyfinFederationPlugin/releases/download/0.0.208/Jellyfin.Federation.zip",
+        "checksum": "9fa373de7cffc90d3387f35d78f6679b"
       },
       {
         "version": "0.0.201",
-        "changelog": "Optional Plex add-in and browser playback resilience. Plex catalogs, Companion connections, metadata/import and .strm export now require the matching optional Plex add-in installed beside the core DLL. Ordinary Jellyfin federation works without it; an absent add-in preserves Plex settings and cached titles without using the wrong protocol. Adaptive web playback tolerates slow HLS segments with bounded buffers, timeouts and retries, while diagnostics omit playback URLs and tokens. Includes everything in 0.0.200.",
+        "changelog": "Fixes friends' titles that never start in a browser (the player keeps loading, the friend sees a viewer at 0:00) when a web server in front of Jellyfin sends broken headers. Your server now checks each friend's server and its own web page for the usual reverse-proxy mistakes: Access-Control-Allow-Origin sent twice, as a list or for the wrong site, Cross-Origin-Resource-Policy blocking your site, and a Content-Security-Policy or Cross-Origin-Embedder-Policy on your own server that leaves friends out. When converted video would be blocked, browsers get it converted on your server instead; every problem is named once in the plugin's Log tab with what to change. Includes everything in 0.0.200.",
         "targetAbi": "12.0.0.0",
-        "timestamp": "2026-10-26T14:02:30Z",
-        "sourceUrl": "https://github.com/Saintdoggie/JellyfinFederationPlugin/releases/download/0.0.201/Jellyfin.Federation.zip",
-        "checksum": "45d3683544d2e6060a704047228ddb4c"
+        "timestamp": "2026-10-25T03:18:50Z",
+        "sourceUrl": "https://github.com/svoeth/JellyfinFederationPlugin/releases/download/0.0.201/Jellyfin.Federation.zip",
+        "checksum": "e33b34e2c482e6b814e1884bc1ecf52c"
       },
       {
         "version": "0.0.200",
-        "changelog": "Security, reliability and bandwidth release. Android raw-file playback no longer enters its HLS-only direct-play path, preventing source errors while preserving original-quality streaming. Direct links become usable as soon as they authenticate while their speed test finishes; a slow or failed test keeps the existing Auto WAN cap instead of removing it. Link setup and forwarding are bounded, permissions and capacity are rechecked before a friend connects, and unexpected sources are refused before TLS. Playback recovers interrupted relays, retains slow converted segments, falls back after direct-link body failures, avoids duplicate bandwidth samples, and uses per-stream bitrates when ranking copies. Catalogs can use Brotli; posters are fetched at sharp display sizes rather than as originals. Also includes reviewed admin, credential, SSRF, response, transcode-admission and Companion-update hardening. Pairing codes remain disabled while under review. Includes everything in 0.0.199.",
+        "changelog": "This version is built on Saintdoggie's upstream 0.0.199, so it brings everything added there since 0.0.186: direct links between friends' servers (beta, off until you turn it on), watch parties with friends, friends converting video for each other, \"Popular on\" and \"Favorites on\" rows on the Home tab, friends' viewers on your dashboard, and many sync, download and playback fixes. On top of that: friends see none of your users unless you share them, you choose which of your friends each friend sees, sharing can end on a date (a whole friend or single libraries), \"Preview what they see\" shows what a friend gets, popular titles and viewer names are shared only if you choose (a default plus a choice per friend; both off on new installs), a friend's conversion log holds only its own conversion, and speed tests count toward a friend's data limit. Coming from this fork's 0.0.196: your sharing choices, end dates and limits are kept and this month's data totals carry over; the Usage tab and the friend activity entries are gone, \"Popular on\" is a Home row instead of a collection (the old collections are removed), and a friend that saw your popular titles needs to be allowed again. Update both servers.",
         "targetAbi": "12.0.0.0",
-        "timestamp": "2026-10-25T13:54:03Z",
-        "sourceUrl": "https://github.com/Saintdoggie/JellyfinFederationPlugin/releases/download/0.0.200/Jellyfin.Federation.zip",
-        "checksum": "4bf2248b3a7f813b088deae26a200d77"
-      },
-      {
-        "version": "0.0.199",
-        "changelog": "Privacy: a friend's home internet address no longer appears in this server's logs or on the status page. Public addresses are shown as a short tag (for example \"public #3f9a2c:51876\") that stays the same for one address while the server runs, so log lines can still be matched up; private, LAN and Tailscale addresses are shown as before for troubleshooting. Error messages that mention an address are cleaned the same way. Your own server's public address is still shown to you on the Beta tab. Pairing codes are disabled in this build while the feature is under review; direct links are unchanged. Includes everything in 0.0.198.",
-        "targetAbi": "12.0.0.0",
-        "timestamp": "2026-10-23T17:40:19Z",
-        "sourceUrl": "https://github.com/Saintdoggie/JellyfinFederationPlugin/releases/download/0.0.199/Jellyfin.Federation.zip",
-        "checksum": "cdf1d6f652d2f02262dc65351722507b"
-      },
-      {
-        "version": "0.0.198",
-        "changelog": "Pairing codes (beta, off by default) and security hardening. Pairing: for servers that can't be port-forwarded, two admins swap two short codes and compare a safety number by voice; the servers then connect over an encrypted UDP link with no open ports, tunnel or Tailscale, and reconnect on their own. Off until you tick it on the new Beta tab, which gathers the sensitive beta settings (direct links, pairing, adaptive playback) with an explanation of each; a paired friend sees this home's internet address. Hardening for direct links: a friend's requests now reach your Jellyfin with only the headers the link needs (no proxy or client-address headers), and read-ahead ignores oversized playlists. Both were found in an attack review; neither was known to be exploitable. Larger QUIC windows for friends far away. Includes everything in 0.0.197.",
-        "targetAbi": "12.0.0.0",
-        "timestamp": "2026-10-22T19:00:37Z",
-        "sourceUrl": "https://github.com/Saintdoggie/JellyfinFederationPlugin/releases/download/0.0.198/Jellyfin.Federation.zip",
-        "checksum": "df261ac45fe67ded20e9f375fac884b1"
-      },
-      {
-        "version": "0.0.197",
-        "changelog": "Faster friend video at home over a direct link. One download from a friend's server can stop well short of your line's speed (about 110 Mbps in testing), so 4K could buffer. Now, while your player watches one piece of a friend's video, your server already fetches the next three over the link at the same time, so playback gets the speed of several downloads (about 178 Mbps in the same test). Only the server watching needs 0.0.197; your friend doesn't have to update. Seeking drops what was fetched for the old spot; memory use is capped at 384 MB. Includes everything in 0.0.196.",
-        "targetAbi": "12.0.0.0",
-        "timestamp": "2026-10-22T18:11:26Z",
-        "sourceUrl": "https://github.com/Saintdoggie/JellyfinFederationPlugin/releases/download/0.0.197/Jellyfin.Federation.zip",
-        "checksum": "6f751722d124be5c58906fa78a8bb108"
+        "timestamp": "2026-10-23T21:37:51Z",
+        "sourceUrl": "https://github.com/svoeth/JellyfinFederationPlugin/releases/download/0.0.200/Jellyfin.Federation.zip",
+        "checksum": "2784b6d64b8d16970fad70bda881d3af"
       },
       {
         "version": "0.0.196",
-        "changelog": "Direct links with friends (beta, off by default). An encrypted UDP connection straight between your server and a friend's, opened through both home routers without port forwarding. Your viewers at home get a friend's video at your two homes' real speeds, even when the friend's server is only reachable through a slow tunnel or VPS; viewers elsewhere keep going straight to the friend, so your upload is never used for friend video. Library downloads from a friend also use it. Privacy: a direct link shows the friend's server your home's internet address, so it stays off until you tick the box at the top of the Friends tab; if you use a tunnel or VPS to keep that address private, leave it off. While off, nothing about it runs. Viewers and players never see the address. Both servers need 0.0.196 with the box ticked; Linux servers (x64/arm64), Windows later. Status per friend on the Friends tab and a Direct link row in Playback Info. Security: keys pinned per session over the existing https friend channel, mutual TLS 1.3 (QUIC), only the friend's video, download and speed-test routes are carried, with the same token checks as today. Testers on 0.0.195: the switch starts off again, tick it to keep using direct links.",
+        "changelog": "Privacy and control per friend. A friend no longer sees your users unless you share them (Friends -> Manage -> \"Users they can see\"); rules they already set keep working. Choose which of your friends each friend can discover, set an end date for sharing (the whole friendship or single libraries), and limit simultaneous streams and data per month. \"Preview what they see\" shows exactly what a friend gets. Friends watching your titles now appear on the plugin page and in Jellyfin's activity log, and the new Usage tab shows per-friend totals and the most watched titles. Optionally tell a friend what is popular on your server (play counts only); their server shows it as a \"Popular on ...\" collection. Update both servers.",
         "targetAbi": "12.0.0.0",
-        "timestamp": "2026-10-22T14:45:29Z",
-        "sourceUrl": "https://github.com/Saintdoggie/JellyfinFederationPlugin/releases/download/0.0.196/Jellyfin.Federation.zip",
-        "checksum": "1a5af8c39bf894197c8dc48e4895b038"
+        "timestamp": "2026-10-19T22:23:34Z",
+        "sourceUrl": "https://github.com/svoeth/JellyfinFederationPlugin/releases/download/0.0.196/Jellyfin.Federation.zip",
+        "checksum": "58a282694a3cd5cb2174c53c761a9fc2"
+      },
+      {
+        "version": "0.0.195",
+        "changelog": "Music playback: when a friend's server refuses the byte range Jellyfin uses to read a song (\"416 Range Not Satisfiable\"), the plugin now asks for the whole file instead, so Jellyfin can read the song and play it. Other refused stream requests are logged with details on the Log tab.",
+        "targetAbi": "12.0.0.0",
+        "timestamp": "2026-10-16T23:56:29Z",
+        "sourceUrl": "https://github.com/svoeth/JellyfinFederationPlugin/releases/download/0.0.195/Jellyfin.Federation.zip",
+        "checksum": "fe7fb9548ed61d23c8b0c8814455fd8b"
       },
       {
         "version": "0.0.194",
-        "changelog": "Data limits, Popular on friends' servers, direct downloads and many fixes. Data limits: set a monthly GB limit and a number of simultaneous streams per friend (Friends tab); it counts everything the friend gets from you, including titles you convert for them, and shows what they used this month. Popular on <friend>: Home shows what was most played on each friend's server in the last 30 days (counts only, never who; each side can switch it off in Advanced). Downloads to a device now go straight from the friend's server to your app in almost every case, including friends behind an https proxy configured with an http address. Speed test: a slow friend link is no longer capped above what it can carry (a 4 Mbps link was asked for 10 Mbps), one failed DNS lookup no longer removes the cap, the result shows in Playback Info, and very slow links keep their measurement. Fixes: rating limits treat TV and film ratings separately (TV-14 no longer lets NC-17 through; an unrecognised limit now blocks rated titles); a damaged cache file no longer deletes every friend title; a friend answering with an empty reply no longer removes all its titles at once; server downloads stop with a clear message when the disk is full and retry real interruptions on their own; a finished download is no longer reported as failed; cover art loads with one request per page again; faster segment handling for titles this server converts. Security: pool and friends-of-friends introductions only go to public or Tailscale addresses, servers that declined us are not asked again for 30 days, the federation token is never sent to a different host on a redirect. Web: no more constant page rescans while a download runs, download progress no longer freezes after one failed check. Data limits work with any friend version; Popular rows need the friend on 0.0.194.",
+        "changelog": "Removing a friend library now works cleanly, also while a sync is running: the sync skips it instead of downloading it again into the library being deleted, and it disappears from the sync status list right away. Saving settings during a sync no longer breaks that sync (or a running stream or download) with \"Cannot access a disposed object\". Library removal recognises the plugin's own libraries more reliably and logs why it keeps one. A full resync still downloads the titles if recreating the library fails.",
         "targetAbi": "12.0.0.0",
-        "timestamp": "2026-10-21T18:36:34Z",
-        "sourceUrl": "https://github.com/Saintdoggie/JellyfinFederationPlugin/releases/download/0.0.194/Jellyfin.Federation.zip",
-        "checksum": "e39c944f0c35508250a38286a93039be"
+        "timestamp": "2026-10-16T23:26:06Z",
+        "sourceUrl": "https://github.com/svoeth/JellyfinFederationPlugin/releases/download/0.0.194/Jellyfin.Federation.zip",
+        "checksum": "38ce9a9ec68f72c2552d8c54f0b7df7c"
       },
       {
         "version": "0.0.193",
-        "changelog": "Smoother, faster playback of friends' titles that the friend converts. Seeking works: a player asking again for a segment that is still being made now waits for it instead of making the friend's server restart its conversion (which could repeat forever on a slow start). Plays start sooner: your server starts the friend's conversion and fetches the next playlist while the player is still on its way. A friend restarting no longer refuses every play: your server gets fresh playback tokens and retries, and tokens now survive a restart. The friend's conversion log of each play is copied into your Dashboard → Logs (the friend can turn this off). Playback Info says \"Not shared\" for a friend that doesn't share its hardware. Seeking, the faster start and the logs need the friend on 0.0.193; the token refresh works with any friend.",
+        "changelog": "Full resync: the Libraries tab has a \"Full resync\" button for each friend library. It deletes everything the plugin put into that library, recreates the library with its current type, and downloads it again - no need to delete and re-add the library by hand. Watch progress on those titles is lost; your own media is not touched.",
         "targetAbi": "12.0.0.0",
-        "timestamp": "2026-10-20T16:22:17Z",
-        "sourceUrl": "https://github.com/Saintdoggie/JellyfinFederationPlugin/releases/download/0.0.193/Jellyfin.Federation.zip",
-        "checksum": "f0f05404db328c1de1b186ce3cb4234c"
+        "timestamp": "2026-10-16T19:20:18Z",
+        "sourceUrl": "https://github.com/svoeth/JellyfinFederationPlugin/releases/download/0.0.193/Jellyfin.Federation.zip",
+        "checksum": "9853ae357e1acaf4ae3a71bd5b46b3a1"
       },
       {
         "version": "0.0.192",
-        "changelog": "Fixes friends' titles failing to play in the browser when the friend converts them: a friend behind some proxies or tunnels wrote http addresses into its playlists, which a browser on an https page refuses. Your server now puts those addresses on the https address it already uses for that friend. Only your server needs 0.0.192 for this; the friend can stay on 0.0.187 or later. Also includes 0.0.191: a friend's title plays only from that friend while it converts for you.",
+        "changelog": "Music: artists now appear right after a sync, without waiting for a library scan. A library set to \"Audio\" also syncs the albums its songs belong to, and changing a library's type moves existing songs into their albums (play state is kept). Clearer names for music types in the library type dropdown.",
         "targetAbi": "12.0.0.0",
-        "timestamp": "2026-10-20T15:19:59Z",
-        "sourceUrl": "https://github.com/Saintdoggie/JellyfinFederationPlugin/releases/download/0.0.192/Jellyfin.Federation.zip",
-        "checksum": "8961d3a7807c989d2156f5b081313389"
+        "timestamp": "2026-10-16T18:59:15Z",
+        "sourceUrl": "https://github.com/svoeth/JellyfinFederationPlugin/releases/download/0.0.192/Jellyfin.Federation.zip",
+        "checksum": "fabf54de380acb920d538eaa51f52098"
       },
       {
         "version": "0.0.191",
-        "changelog": "A friend's title now plays only from that friend when it converts for you: one play is never split between their server and yours, and one failed title no longer switches every title from that friend over to your server for two minutes. If the friend is at its limit or can't play a title, the player shows that, instead of your server stepping in halfway. Your server still converts a friend's titles when the friend has switched converting off or runs an older version.",
+        "changelog": "Reconnect: if a friend reinstalls the plugin or loses its keys, a new friend request from the same address renews the keys of the existing friendship (after you accept), keeping libraries, sharing settings and synced titles; each friend also has a Reconnect button. The internal key a server uses to read its own library is now replaced automatically when Jellyfin no longer knows it (this caused one-way 503 errors). Music: albums now sync with their songs. New friend requests: choose which libraries to share before sending or accepting a request; nothing is shared unless you tick it. Update both servers.",
         "targetAbi": "12.0.0.0",
-        "timestamp": "2026-10-20T15:05:08Z",
-        "sourceUrl": "https://github.com/Saintdoggie/JellyfinFederationPlugin/releases/download/0.0.191/Jellyfin.Federation.zip",
-        "checksum": "701d9c450082a395706c74d8a050fbcf"
+        "timestamp": "2026-10-16T17:39:31Z",
+        "sourceUrl": "https://github.com/svoeth/JellyfinFederationPlugin/releases/download/0.0.191/Jellyfin.Federation.zip",
+        "checksum": "7e3f094df44c0ab79dc91e957e2f4f5b"
       },
       {
         "version": "0.0.190",
-        "changelog": "Server downloads go where you choose: your Movies or Shows library (the default), another library, a new folder of its own, or the separate Federation Downloads library, named so Jellyfin identifies them. Friends' viewers watching your titles show on your dashboard like your own (title, how far in, paused), and the player's Playback Info shows how a friend's title reaches you. Optional: servers share their conversion hardware, and you can let hardware decide who converts a friend's title (off by default). Both servers need 0.0.190 for the viewer and hardware parts.",
+        "changelog": "Safer and faster sync. Titles a friend no longer lists are removed only after two syncs in a row, and a large removal (more than 25 titles and 10% of a library) waits until you confirm it on the Libraries tab. Friends tell each other when their library changes, so new titles arrive within minutes. Failed requests are retried and interrupted downloads resume. Unchanged syncs are much faster on large libraries, friends are checked in parallel, and episode images are downloaded at a smaller size. Update both servers.",
         "targetAbi": "12.0.0.0",
-        "timestamp": "2026-10-20T14:27:47Z",
-        "sourceUrl": "https://github.com/Saintdoggie/JellyfinFederationPlugin/releases/download/0.0.190/Jellyfin.Federation.zip",
-        "checksum": "9cb488c7c77baf8ba9cdd67702c399da"
+        "timestamp": "2026-10-16T14:52:24Z",
+        "sourceUrl": "https://github.com/svoeth/JellyfinFederationPlugin/releases/download/0.0.190/Jellyfin.Federation.zip",
+        "checksum": "8d04c78e2b866d9e82247518268b18f5"
       },
       {
         "version": "0.0.189",
-        "changelog": "Watch parties with friends: in the group (SyncPlay) menu at the top, choose \"New group with friends\" (or \"Invite friends\" in a group). Your friends' viewers find the party in their own group list and join it like any group, from any app that supports group watching, while everyone plays their own server's copy. Play, pause, seeking and title changes are shared, and anyone loading or buffering pauses everyone until they're ready. Each viewer still needs access to what's playing. Switches under Advanced. Both servers need 0.0.189.",
+        "changelog": "Fixes TV shows losing their episodes: when a friend's Jellyfin found TVDB/TMDB ids for its shows, every show, season and episode was deleted and recreated here, losing watched state. Titles now keep their identity. Syncs no longer rewrite every synced item in the Jellyfin database each time, which made large libraries slow, and friend libraries are paged in a stable order so episodes with identical names can't be skipped. New: the Libraries tab shows a sync status per friend library - what will be downloaded before anything is, progress, and plain-language errors - and Refresh now runs in the background. Update both servers.",
         "targetAbi": "12.0.0.0",
-        "timestamp": "2026-10-20T07:52:47Z",
-        "sourceUrl": "https://github.com/Saintdoggie/JellyfinFederationPlugin/releases/download/0.0.189/Jellyfin.Federation.zip",
-        "checksum": "050d90d62a385abd7371cbb3bef0fee3"
+        "timestamp": "2026-10-16T13:02:20Z",
+        "sourceUrl": "https://github.com/svoeth/JellyfinFederationPlugin/releases/download/0.0.189/Jellyfin.Federation.zip",
+        "checksum": "50eca132d3d2e7b4eba9c59d8f601178"
       },
       {
         "version": "0.0.188",
-        "changelog": "Anyone can now download a friend's title to their phone or computer with their app's normal Download button (web, Jellyfin for Android, Findroid, Swiftfin). The file comes straight from the friend's server with its real name; if that isn't possible your server passes it through, and interrupted downloads resume. The friend's download permission and per-viewer rules apply. New: friends' favorites. Your Favorites tab shows a \"Favorites on (friend)\" row per friend with the titles their users favorited (titles only, never who, only titles you can already open). Both can be turned off in Advanced. Fixes the old web \"Download to device\" option, which only worked on the server itself. Friends need 0.0.188 for direct downloads and favorites; with older friends downloads go through your server.",
+        "changelog": "Much faster sync with friends, especially for large libraries. Large libraries no longer time out: each page continues where the last one stopped instead of rereading the whole library. After the first sync, only new or changed titles are downloaded, and catalog data is sent compressed and without fields that were never used, so an unchanged sync is a tiny request. The Log tab now shows the server's own Federation messages, including why a friend's library failed to sync. Update both servers to get the full benefit; mixed versions keep working.",
         "targetAbi": "12.0.0.0",
-        "timestamp": "2026-10-20T04:17:14Z",
-        "sourceUrl": "https://github.com/Saintdoggie/JellyfinFederationPlugin/releases/download/0.0.188/Jellyfin.Federation.zip",
-        "checksum": "4c4e574dfe8a4c0b208635b99775ce4a"
+        "timestamp": "2026-10-16T00:16:07Z",
+        "sourceUrl": "https://github.com/svoeth/JellyfinFederationPlugin/releases/download/0.0.188/Jellyfin.Federation.zip",
+        "checksum": "7dd544f7ac4aa5085c96a20faa62b543"
       },
       {
         "version": "0.0.187",
-        "changelog": "Friends' titles now convert on the friend's own server: when your viewer's device needs a converted stream, the friend's server converts its own copy (its GPU) and streams it straight to the player, while the viewer stays signed in to your server and their progress is saved there. The video no longer passes through your server; if the friend can't, your server converts as before. A friend's rules for one of your users (block, only some libraries or titles, rating limit) now hide those titles from that user everywhere instead of only refusing to play them, and rules are re-checked every sync so a missed update can't stick. Unsharing a library removes its titles from the friend right away. Also fixes friend titles with an external subtitle failing to convert. Both servers need this version for the direct conversion.",
+        "changelog": "Fix: friends you share only selected libraries with now receive those libraries' titles. Previously they got an empty catalog while sync still reported success, and per-user \"certain libraries\" rules hid everything. Update the server that shares the content.",
         "targetAbi": "12.0.0.0",
-        "timestamp": "2026-10-20T03:14:29Z",
-        "sourceUrl": "https://github.com/Saintdoggie/JellyfinFederationPlugin/releases/download/0.0.187/Jellyfin.Federation.zip",
-        "checksum": "2e033381b2395192f46d0cbbdce02dbd"
+        "timestamp": "2026-10-15T22:39:23Z",
+        "sourceUrl": "https://github.com/svoeth/JellyfinFederationPlugin/releases/download/0.0.187/Jellyfin.Federation.zip",
+        "checksum": "4547c21be81e807bc7eba2e69adb907b"
       },
       {
         "version": "0.0.186",
-        "changelog": "Friends sync much faster and more reliably, with thanks to Stephan Voeth (@svoeth), whose contribution is still under review, so please report any problems. After the first sync only new or changed titles are downloaded, large removals wait for you to confirm them, music syncs with its albums, songs and artists, friends shared individual libraries now see them, and the Libraries tab shows what each friend library is doing. You can choose what a new friend sees before sending or accepting a request, reconnect a friend after a reinstall, and fully resync one library. Also fixes a security hole where a malicious friend could make a download write a file outside the downloads folder.",
+        "changelog": "Security fix: downloading a friend's title to this server can no longer write a file outside the Federation downloads folder. A friend's server could previously use crafted media details to place a file anywhere Jellyfin can write. Updating is recommended for everyone who uses Download to server.",
         "targetAbi": "12.0.0.0",
-        "timestamp": "2026-10-17T18:08:17Z",
-        "sourceUrl": "https://github.com/Saintdoggie/JellyfinFederationPlugin/releases/download/0.0.186/Jellyfin.Federation.zip",
-        "checksum": "b81eb5bc1ae87c10c29941bfa26c12c1"
+        "timestamp": "2026-10-15T20:51:06Z",
+        "sourceUrl": "https://github.com/svoeth/JellyfinFederationPlugin/releases/download/0.0.186/Jellyfin.Federation.zip",
+        "checksum": "c56e03735f1422daa40135cda95be103"
       },
       {
         "version": "0.0.185",
         "changelog": "Coming from Plex? The Plex tab is now a three-step guide that brings your Plex movie and TV libraries into Jellyfin. Sign in with Plex, pick the libraries, and the plugin creates matching Jellyfin libraries over the same folders (or reuses ones you already have), with Plex's cover art, backdrops and descriptions. If Plex runs on another computer, drive or container, add a folder rewrite and check again. A match report shows how many titles found their Plex artwork. The new libraries are ordinary Jellyfin libraries, so sharing with friends and downloads keep working.",
         "targetAbi": "12.0.0.0",
         "timestamp": "2026-10-15T02:46:03Z",
-        "sourceUrl": "https://github.com/Saintdoggie/JellyfinFederationPlugin/releases/download/0.0.185/Jellyfin.Federation.zip",
+        "sourceUrl": "https://github.com/svoeth/JellyfinFederationPlugin/releases/download/0.0.185/Jellyfin.Federation.zip",
         "checksum": "7cec643565b7e374ad63360ec56e1a37"
       },
       {
@@ -188,7 +132,7 @@
         "changelog": "The connection-speed test now times a real file from each friend instead of a test endpoint that read far too low, so fast friends are no longer capped to 20 Mbps 1080p and 4K titles play in full quality. The library \"This server\" tab now filters on the server, so it shows all of your own titles with correct paging instead of a few cards or an empty page, and the source tabs no longer hide a friend's episodes on a show's page or miss the first page you open.",
         "targetAbi": "12.0.0.0",
         "timestamp": "2026-10-14T19:36:26Z",
-        "sourceUrl": "https://github.com/Saintdoggie/JellyfinFederationPlugin/releases/download/0.0.184/Jellyfin.Federation.zip",
+        "sourceUrl": "https://github.com/svoeth/JellyfinFederationPlugin/releases/download/0.0.184/Jellyfin.Federation.zip",
         "checksum": "8a8ba203e39156402ad7b276ef28f0c6"
       },
       {
@@ -196,7 +140,7 @@
         "changelog": "Federated titles from a friend's server in Direct mode now stream straight from that server to your device instead of through your own server's upload, so they start much faster. Apps like Findroid that ask your server for the file are sent to the friend's server too. A file that already fits your connection is no longer re-encoded by the friend's server, the connection-speed test no longer underestimates fast servers, a friend whose address redirects to https is now reached over https, and the hourly sync no longer rewrites every federated item.",
         "targetAbi": "12.0.0.0",
         "timestamp": "2026-10-14T19:16:27Z",
-        "sourceUrl": "https://github.com/Saintdoggie/JellyfinFederationPlugin/releases/download/0.0.183/Jellyfin.Federation.zip",
+        "sourceUrl": "https://github.com/svoeth/JellyfinFederationPlugin/releases/download/0.0.183/Jellyfin.Federation.zip",
         "checksum": "e5c0b6f16e10350bd4981451e74d1493"
       },
       {
@@ -204,7 +148,7 @@
         "changelog": "The version dropdown on a title's details page now lists the copy on every server that has it, including a server that is currently offline (marked offline) so you can see where else the title lives. When one server has several copies, each is labelled with its resolution and file size so you can tell them apart. Before, a copy on an offline server was left out, which hid the dropdown for most titles while a friend's server was down.",
         "targetAbi": "12.0.0.0",
         "timestamp": "2026-10-14T15:45:51Z",
-        "sourceUrl": "https://github.com/Saintdoggie/JellyfinFederationPlugin/releases/download/0.0.182/Jellyfin.Federation.zip",
+        "sourceUrl": "https://github.com/svoeth/JellyfinFederationPlugin/releases/download/0.0.182/Jellyfin.Federation.zip",
         "checksum": "7a38da04c32a37d0388fcfe2978e2e17"
       },
       {
@@ -212,7 +156,7 @@
         "changelog": "The extra server buttons under the Play button are gone. Choosing which server's copy to play now uses only Jellyfin's own version dropdown, which lists every server that has the title, and the video, audio and subtitle details below it update for the copy you pick.",
         "targetAbi": "12.0.0.0",
         "timestamp": "2026-10-13T17:12:41Z",
-        "sourceUrl": "https://github.com/Saintdoggie/JellyfinFederationPlugin/releases/download/0.0.181/Jellyfin.Federation.zip",
+        "sourceUrl": "https://github.com/svoeth/JellyfinFederationPlugin/releases/download/0.0.181/Jellyfin.Federation.zip",
         "checksum": "0ad6e9f3f038c50f3819ff4dec2cbe08"
       },
       {
@@ -220,7 +164,7 @@
         "changelog": "Titles that several servers have now show every copy in the version dropdown on the details page, each named after its server, so you can pick which server to play from. Before, the dropdown only appeared once playback started, so the other servers' copies could not be chosen.",
         "targetAbi": "12.0.0.0",
         "timestamp": "2026-10-13T17:07:52Z",
-        "sourceUrl": "https://github.com/Saintdoggie/JellyfinFederationPlugin/releases/download/0.0.180/Jellyfin.Federation.zip",
+        "sourceUrl": "https://github.com/svoeth/JellyfinFederationPlugin/releases/download/0.0.180/Jellyfin.Federation.zip",
         "checksum": "5972bcb76a5b9e82859be6b3d5c9ce48"
       },
       {
@@ -228,15 +172,15 @@
         "changelog": "Faster settings page. Opening settings no longer waits on a friend's server that is asleep: each friend's libraries are now asked for at the same time with a 10 second limit, and one that does not answer shows as not responding on its own row instead of holding up the whole list. The slow scan for better-quality copies (about 11 seconds on a large library) no longer runs every time the page opens; it runs when you open the Storage tab, in the background, and its result is kept for five minutes.",
         "targetAbi": "12.0.0.0",
         "timestamp": "2026-10-13T16:41:02Z",
-        "sourceUrl": "https://github.com/Saintdoggie/JellyfinFederationPlugin/releases/download/0.0.179/Jellyfin.Federation.zip",
+        "sourceUrl": "https://github.com/svoeth/JellyfinFederationPlugin/releases/download/0.0.179/Jellyfin.Federation.zip",
         "checksum": "ab0609d78f54114f89e0c42f18cfaaa5"
       },
       {
         "version": "0.0.178",
-        "changelog": "Plex can now be the source of cover art and descriptions for your own libraries. The new Plex tab signs in to Plex (no token pasting), lists your servers and libraries, and lets you choose what to pull: posters and backdrops, and titles, summaries, genres, ratings and studios, for your movies, shows, seasons and episodes, matched by TMDb/IMDb/TVDB id or title and year. What you share with friends carries the same art and details. Titles that several servers host now offer every server's cover art to choose from instead of only one server's, and the version picker names the item's own source after its server (for example \"plex-source (primary)\") instead of the movie title, in every client.",
+        "changelog": "Plex can now be the source of cover art and descriptions for your own libraries. The new Plex tab signs in to Plex (no token pasting), lists your servers and libraries, and lets you choose what to pull: posters and backdrops, and titles, summaries, genres, ratings and studios, for your movies, shows, seasons and episodes, matched by TMDb/IMDb/TVDB id or title and year. What you share with friends carries the same art and details. Titles that several servers host now offer every server's cover art to choose from instead of only one server's, and the version picker names the item's own source after its server (for example \"freakbob (primary)\") instead of the movie title, in every client.",
         "targetAbi": "12.0.0.0",
         "timestamp": "2026-10-13T16:24:00Z",
-        "sourceUrl": "https://github.com/Saintdoggie/JellyfinFederationPlugin/releases/download/0.0.178/Jellyfin.Federation.zip",
+        "sourceUrl": "https://github.com/svoeth/JellyfinFederationPlugin/releases/download/0.0.178/Jellyfin.Federation.zip",
         "checksum": "d0e726d98029efa9fa6a40595b52dd79"
       },
       {
@@ -244,7 +188,7 @@
         "changelog": "Adding a friend now asks what you want: a prompt lists their libraries (what you receive) and yours (what you share with them), and nothing is pulled in until you save. Previously every library they had was selected automatically. Unticking a friend's library now removes the items it brought in, right when you save: before, unticking a friend's last library in a section such as Music left their items behind until you removed the whole section.",
         "targetAbi": "12.0.0.0",
         "timestamp": "2026-10-09T16:19:07Z",
-        "sourceUrl": "https://github.com/Saintdoggie/JellyfinFederationPlugin/releases/download/0.0.177/Jellyfin.Federation.zip",
+        "sourceUrl": "https://github.com/svoeth/JellyfinFederationPlugin/releases/download/0.0.177/Jellyfin.Federation.zip",
         "checksum": "779f1bd2220c13091e2ef620bdd74bf5"
       },
       {
@@ -252,7 +196,7 @@
         "changelog": "Friends' titles no longer disappear and reappear when a friend's server drops offline and comes back. Previously every one of their movies and shows was deleted from your library on each outage and recreated on return, which looked like the server constantly re-adding its whole catalog and lost watch progress. Now existing titles stay in place (the web client still hides the ones that are currently unavailable) and only genuinely new titles wait for the server to return. Disabling a server still removes its titles.",
         "targetAbi": "12.0.0.0",
         "timestamp": "2026-10-09T15:09:02Z",
-        "sourceUrl": "https://github.com/Saintdoggie/JellyfinFederationPlugin/releases/download/0.0.176/Jellyfin.Federation.zip",
+        "sourceUrl": "https://github.com/svoeth/JellyfinFederationPlugin/releases/download/0.0.176/Jellyfin.Federation.zip",
         "checksum": "8a4fda99068a2b736188d3f36a687b50"
       },
       {
@@ -260,7 +204,7 @@
         "changelog": "Titles whose every source server is offline are now hidden from library views instead of showing as unplayable cards, and the \"from <server>\" label follows whichever server can actually play the title. After a restart, the plugin confirms which friends are reachable before restoring their titles, so an offline friend's catalog no longer flashes back in. Faster, safer playback start: when several people press play on the same federated title at once, one metadata request is made to the friend's server instead of one each, and that cached playback information is kept per viewer so one person's access is never reused for another. Adds startup timing logs (debug level) for diagnosing slow starts.",
         "targetAbi": "12.0.0.0",
         "timestamp": "2026-10-07T14:56:27Z",
-        "sourceUrl": "https://github.com/Saintdoggie/JellyfinFederationPlugin/releases/download/0.0.175/Jellyfin.Federation.zip",
+        "sourceUrl": "https://github.com/svoeth/JellyfinFederationPlugin/releases/download/0.0.175/Jellyfin.Federation.zip",
         "checksum": "a97220160e3fd4ed6b2b31d87f90294c"
       },
       {
@@ -268,7 +212,7 @@
         "changelog": "Settings page polish: the tab row stays on one line and scrolls sideways instead of wrapping, the active tab stays in view, buttons and toggles get larger tap targets and clear focus rings on small screens, and the remaining hard-coded blue tints now follow your theme. Browsing a Plex library is much faster: one library fetch is reused while you scroll instead of refetching the whole library for every page. Companion dashboard (also shown in the new Windows app window) gets a cleaner, flatter app layout with solid colours, clearer buttons and form controls, and more readable status badges.",
         "targetAbi": "12.0.0.0",
         "timestamp": "2026-10-07T14:44:03Z",
-        "sourceUrl": "https://github.com/Saintdoggie/JellyfinFederationPlugin/releases/download/0.0.174/Jellyfin.Federation.zip",
+        "sourceUrl": "https://github.com/svoeth/JellyfinFederationPlugin/releases/download/0.0.174/Jellyfin.Federation.zip",
         "checksum": "65ce0338541617491be26bd29ed54991"
       },
       {
@@ -276,7 +220,7 @@
         "changelog": "Downloads from a Plex source that is offline no longer break the Downloads tab: it now says the server can't be reached, offline servers are marked in the picker, and downloads queued from them wait until it is back. Adds an opt-in adaptive player (Advanced → off by default) that can switch a movie to another friend's copy mid-play when that copy is clearly more reliable, preparing the new source first and showing a brief 'Switched to <server>' notice. Detail pages show which servers have a title and let you pick one instead of Auto. Learns when each friend's server is usually online and shows a forecast; adds a Log tab with this plugin's recent messages. Includes the Companion private file-sharing preview. UI uses solid colours throughout.",
         "targetAbi": "12.0.0.0",
         "timestamp": "2026-10-07T14:37:03Z",
-        "sourceUrl": "https://github.com/Saintdoggie/JellyfinFederationPlugin/releases/download/0.0.173/Jellyfin.Federation.zip",
+        "sourceUrl": "https://github.com/svoeth/JellyfinFederationPlugin/releases/download/0.0.173/Jellyfin.Federation.zip",
         "checksum": "728e91973e37fc38d74acbc0c41c2b44"
       },
       {
@@ -284,7 +228,7 @@
         "changelog": "Adds a loading bar for slow federated starts: when a federated title is still black 1.5 seconds after play, a simple bar at the bottom shows a projected countdown, why it is taking a while, and a fun fact (admin switches for the bar, the fun-fact lookup and the fast-start analysis window; facts are fetched by the server, with a built-in fallback). Measures each friend's connection speed daily, when a server is added, and when one comes back online (Jellyfin peers and Plex), and uses it to project start times. When a title is on several friends' servers and the first choice would take over 30 seconds to start, prefers a clearly faster online source (only measured sources are ever preferred; otherwise your priority order stands). Adds timing logs for slow upstream responses and media-source resolution, and an admin diagnostic for Plex transcoding. Bounds how much of a remote file ffmpeg analyses before starting (quality is unchanged). Titles whose source reports two streams with the same index now keep their stream info instead of triggering a slow first-play probe.",
         "targetAbi": "12.0.0.0",
         "timestamp": "2026-10-03T22:16:16Z",
-        "sourceUrl": "https://github.com/Saintdoggie/JellyfinFederationPlugin/releases/download/0.0.172/Jellyfin.Federation.zip",
+        "sourceUrl": "https://github.com/svoeth/JellyfinFederationPlugin/releases/download/0.0.172/Jellyfin.Federation.zip",
         "checksum": "20290a3bdaebccf9b3868397dd5aeac8"
       },
       {
@@ -292,7 +236,7 @@
         "changelog": "Read Plex file size, container, bitrate, codecs, HDR data and actual stream indexes from the same playable file. Retain Jellyfin peer file sizes and bitrates without retaining upstream paths or headers. Refresh current Plex media information during playback and persist corrected sizes without replacing item IDs. Track source-specific poster selections and episode poster fallbacks. Keep offline/recovery notifications ordered, hide titles whose remaining sources are disabled, preserve known durations when peers report zero, and accept authenticated HEAD requests on the media relay. Reconcile playback paths immediately when a friend changes per-user access so permitted users keep playing while revoked URLs are denied.",
         "targetAbi": "12.0.0.0",
         "timestamp": "2026-10-01T13:42:06Z",
-        "sourceUrl": "https://github.com/Saintdoggie/JellyfinFederationPlugin/releases/download/0.0.170/Jellyfin.Federation.zip",
+        "sourceUrl": "https://github.com/svoeth/JellyfinFederationPlugin/releases/download/0.0.170/Jellyfin.Federation.zip",
         "checksum": "04535a6a554a5df8d463b43d3e1fd0c0"
       },
       {
@@ -300,7 +244,7 @@
         "changelog": "Bind federated playback paths, container, runtime, and audio tracks to the same reachable source. Exclude offline sources from legacy Auto selection and prevent exact-source streams from switching silently to incompatible files. Fetch posters from reachable Jellyfin or Plex sources so an offline catalog primary does not block artwork. Retain Jellyfin 12 media-source container metadata during full catalog sync so compatible clients can direct-play.",
         "targetAbi": "12.0.0.0",
         "timestamp": "2026-09-27T17:11:48Z",
-        "sourceUrl": "https://github.com/Saintdoggie/JellyfinFederationPlugin/releases/download/0.0.169/Jellyfin.Federation.zip",
+        "sourceUrl": "https://github.com/svoeth/JellyfinFederationPlugin/releases/download/0.0.169/Jellyfin.Federation.zip",
         "checksum": "3a17293fdae8629209ab27ff7c6dd114"
       },
       {
@@ -308,7 +252,7 @@
         "changelog": "Fix federated 4K HDR playback failures caused by WAN-capped remote transcoding. Static Direct streams now serve the original file they advertise, avoiding upstream HTTP 500 errors and MKV/MP4 format mismatches. Log upstream stream failures without exposing playback tokens.",
         "targetAbi": "12.0.0.0",
         "timestamp": "2026-09-24T13:33:10Z",
-        "sourceUrl": "https://github.com/Saintdoggie/JellyfinFederationPlugin/releases/download/0.0.168/Jellyfin.Federation.zip",
+        "sourceUrl": "https://github.com/svoeth/JellyfinFederationPlugin/releases/download/0.0.168/Jellyfin.Federation.zip",
         "checksum": "47ebd1563c90b1b8f559ba4b944d2c3f"
       },
       {
@@ -316,7 +260,7 @@
         "changelog": "Movies, Shows, Home and Search get an injected source tab strip: All, This server, and one tab per federated friend. Choosing a source filters both the on-screen cards and Jellyfin item queries so paging stays filled.",
         "targetAbi": "12.0.0.0",
         "timestamp": "2026-09-18T17:05:00Z",
-        "sourceUrl": "https://github.com/Saintdoggie/JellyfinFederationPlugin/releases/download/0.0.167/Jellyfin.Federation.zip",
+        "sourceUrl": "https://github.com/svoeth/JellyfinFederationPlugin/releases/download/0.0.167/Jellyfin.Federation.zip",
         "checksum": "6946b16bf0280bd9670a551e36953297"
       },
       {
@@ -324,7 +268,7 @@
         "changelog": "Unreachable friends' titles now hide and return: the availability pinger and the hide/restore path share one service instance, so Plex-only (or any single-server) items leave the library while that friend is down and are recreated from cache when it answers again. Server-to-server downloads survive a restart: partial files resume via HTTP Range, pause when the source is unreachable, and keep showing size and speed. Plex posters are copied into Jellyfin's local image store by native id even when the catalog snapshot has no thumb tag.",
         "targetAbi": "12.0.0.0",
         "timestamp": "2026-09-18T15:00:00Z",
-        "sourceUrl": "https://github.com/Saintdoggie/JellyfinFederationPlugin/releases/download/0.0.166/Jellyfin.Federation.zip",
+        "sourceUrl": "https://github.com/svoeth/JellyfinFederationPlugin/releases/download/0.0.166/Jellyfin.Federation.zip",
         "checksum": "b994415fcf52819355eb37178ea551f9"
       },
       {
@@ -332,7 +276,7 @@
         "changelog": "Fix federated playback when Auto fails over to a duplicate in a different container: ffmpeg was launched with the primary's -f (Matroska) while Auto served MP4 bytes, which exited 183. Mixed-container Auto items no longer stamp a single container, Auto prefers a live sibling the advertised demuxer can parse, and a failed live preflight no longer leaves a title with zero playable sources.",
         "targetAbi": "12.0.0.0",
         "timestamp": "2026-09-17T18:15:00Z",
-        "sourceUrl": "https://github.com/Saintdoggie/JellyfinFederationPlugin/releases/download/0.0.165/Jellyfin.Federation.zip",
+        "sourceUrl": "https://github.com/svoeth/JellyfinFederationPlugin/releases/download/0.0.165/Jellyfin.Federation.zip",
         "checksum": "7c82337a5bb5522bfdf0e6dfc7ddb5d9"
       },
       {
@@ -340,7 +284,7 @@
         "changelog": "Settings UI polish: the federation badge is a crisp solid chip with a clean border (no gradients), and the Catalog and Downloads browsers now lazy-load as you scroll instead of using Load more buttons, with bounded pages, stale-response protection, and explicit retry after a network error.",
         "targetAbi": "12.0.0.0",
         "timestamp": "2026-09-17T17:20:57Z",
-        "sourceUrl": "https://github.com/Saintdoggie/JellyfinFederationPlugin/releases/download/0.0.164/Jellyfin.Federation.zip",
+        "sourceUrl": "https://github.com/svoeth/JellyfinFederationPlugin/releases/download/0.0.164/Jellyfin.Federation.zip",
         "checksum": "72fe5f8c7182b415adcdca4225ebb7c1"
       },
       {
@@ -348,7 +292,7 @@
         "changelog": "Capped WAN playback now advertises the representation the gateway actually delivers instead of the original HEVC/AV1 file, so client codec and bitrate negotiation works on weak clients, and transcode budgets reserve audio and muxing headroom instead of exceeding the relay cap. Relay buffers are pooled to reduce allocation churn under concurrent streams.",
         "targetAbi": "12.0.0.0",
         "timestamp": "2026-09-17T14:30:26Z",
-        "sourceUrl": "https://github.com/Saintdoggie/JellyfinFederationPlugin/releases/download/0.0.163/Jellyfin.Federation.zip",
+        "sourceUrl": "https://github.com/svoeth/JellyfinFederationPlugin/releases/download/0.0.163/Jellyfin.Federation.zip",
         "checksum": "0a12674e9615bf372dc285b21ad5807e"
       },
       {
@@ -356,7 +300,7 @@
         "changelog": "Playback Auto now rejects dead sources before playback, chooses the highest-quality live copy that fits each server's measured or configured WAN capacity, and falls back across duplicate Jellyfin or Plex copies without changing the stable Jellyfin item or its watch progress. Exact per-source bitrate, resolution, container, runtime, Plex native ID, and signed Auto authority remain bound to the selected source.",
         "targetAbi": "12.0.0.0",
         "timestamp": "2026-09-16T02:18:55Z",
-        "sourceUrl": "https://github.com/Saintdoggie/JellyfinFederationPlugin/releases/download/0.0.162/Jellyfin.Federation.zip",
+        "sourceUrl": "https://github.com/svoeth/JellyfinFederationPlugin/releases/download/0.0.162/Jellyfin.Federation.zip",
         "checksum": "b6b2b36030ec88f88ac57b20c0b2996e"
       },
       {
@@ -364,7 +308,7 @@
         "changelog": "Plex artwork repair: existing and newly federated movies now cache the exact poster selected on the source Plex server, refresh when that poster changes, and keep native IDs and artwork revisions bound to the correct source when duplicate titles span multiple Plex servers. Poster credentials remain server-side and watch history is preserved.",
         "targetAbi": "12.0.0.0",
         "timestamp": "2026-09-16T01:46:42Z",
-        "sourceUrl": "https://github.com/Saintdoggie/JellyfinFederationPlugin/releases/download/0.0.161/Jellyfin.Federation.zip",
+        "sourceUrl": "https://github.com/svoeth/JellyfinFederationPlugin/releases/download/0.0.161/Jellyfin.Federation.zip",
         "checksum": "69cd214ee8f911a38240fd91b68cf1a9"
       },
       {
@@ -372,7 +316,7 @@
         "changelog": "Faster Downloads browsing (slim catalog payloads, batched cover art, cached duplicate checks) and offline hide/unhide: a background check pings every friend every couple of minutes, hiding unreachable servers' titles until they return. Nothing is ever deleted; items reappear on rescan.",
         "targetAbi": "12.0.0.0",
         "timestamp": "2026-09-15T17:31:49Z",
-        "sourceUrl": "https://github.com/Saintdoggie/JellyfinFederationPlugin/releases/download/0.0.160/Jellyfin.Federation.zip",
+        "sourceUrl": "https://github.com/svoeth/JellyfinFederationPlugin/releases/download/0.0.160/Jellyfin.Federation.zip",
         "checksum": "0b4beeed4c2a3a2c1aab399c3e6090cb"
       },
       {
@@ -380,7 +324,7 @@
         "changelog": "Companion desktop app (Windows tray/WinExe, Linux autostart and launcher, single-instance, SHA256SUMS installers), lifecycle hardening (no automatic media helper on fresh install, persisted Stop, credential ACLs, safer updater), Storage tab review, and friend-callback SSRF hardening that connects only to public resolved addresses.",
         "targetAbi": "12.0.0.0",
         "timestamp": "2026-09-10T14:30:00Z",
-        "sourceUrl": "https://github.com/Saintdoggie/JellyfinFederationPlugin/releases/download/0.0.159/Jellyfin.Federation.zip",
+        "sourceUrl": "https://github.com/svoeth/JellyfinFederationPlugin/releases/download/0.0.159/Jellyfin.Federation.zip",
         "checksum": "c4937d2a41cfab909ed37692e05a0687"
       },
       {
@@ -388,7 +332,7 @@
         "changelog": "Consolidated 0.0.136-0.0.158: security and access fixes (confused-deputy peer POSTs, signed download flag, item-scoped playback/image capabilities, no re-sharing of downloaded federated files, anonymous inventory hardening, HMAC expiry, bounded friend requests/icons), correctness fixes (mapping/cache-key stability, catalog pruning, pool icons, Downloads path, strm export safety, WAN cap on direct streams, live Kestrel port for stamped paths), Companion/Plex fixes, and settings-page fixes including Friends copy, pool refresh, and per-user BlockedItemIds round-trip.",
         "targetAbi": "12.0.0.0",
         "timestamp": "2026-09-09T16:30:00Z",
-        "sourceUrl": "https://github.com/Saintdoggie/JellyfinFederationPlugin/releases/download/0.0.158/Jellyfin.Federation.zip",
+        "sourceUrl": "https://github.com/svoeth/JellyfinFederationPlugin/releases/download/0.0.158/Jellyfin.Federation.zip",
         "checksum": "01bdd7ab52feb6feaef003cc6003171d"
       },
       {
@@ -396,14 +340,14 @@
         "changelog": "Jellyfin 12 support: rebuilt for .NET 10 and Jellyfin 12 APIs. Settings, badges, peer catalog, artwork and streaming use supported native authentication with legacy auth disabled. Older Jellyfin 10.11 servers should keep 0.0.135.",
         "targetAbi": "12.0.0.0",
         "timestamp": "2026-09-08T13:01:10Z",
-        "sourceUrl": "https://github.com/Saintdoggie/JellyfinFederationPlugin/releases/download/0.0.136/Jellyfin.Federation.zip",
+        "sourceUrl": "https://github.com/svoeth/JellyfinFederationPlugin/releases/download/0.0.136/Jellyfin.Federation.zip",
         "checksum": "5d86a28ce529d60d51133daab06b2c07"
       },
       {
         "version": "0.0.135",
         "changelog": "Plex Companion now reports a Federation plugin version and can join pools. Inviting a Plex friend no longer fails as an unknown/old plugin; they Accept the pool invite in Companion. Direct Plex Relay friends still need Funnel so the invite can be delivered.",
         "targetAbi": "10.11.0.0",
-        "sourceUrl": "https://github.com/Saintdoggie/JellyfinFederationPlugin/releases/download/0.0.135/Jellyfin.Federation.zip",
+        "sourceUrl": "https://github.com/svoeth/JellyfinFederationPlugin/releases/download/0.0.135/Jellyfin.Federation.zip",
         "checksum": "cc14b9bdb01a5a452313079295a56cc8",
         "timestamp": "2026-09-06T20:30:00Z"
       }

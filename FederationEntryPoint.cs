@@ -34,6 +34,7 @@ namespace Jellyfin.Plugin.Federation
         private readonly WanBandwidthMonitor _bandwidthMonitor;
         private readonly FederationLogBuffer _logBuffer;
         private readonly AvailabilityScheduleStore _availabilitySchedule;
+        private readonly ILibraryManager _libraryManager;
         private readonly SemaphoreSlim _reachabilityRescanGate = new(1, 1);
         private int _reachabilityRescanEpoch;
         private volatile bool _startupAvailabilityReady;
@@ -55,8 +56,10 @@ namespace Jellyfin.Plugin.Federation
             WanBandwidthMonitor bandwidthMonitor,
             FederationLogBuffer logBuffer,
             AvailabilityScheduleStore availabilitySchedule,
-            FederationChangeNotifier changeNotifier)
+            FederationChangeNotifier changeNotifier,
+            ILibraryManager libraryManager)
         {
+            _libraryManager = libraryManager;
             _changeNotifier = changeNotifier;
             _logger = logger;
             _federationManager = federationManager;
@@ -253,6 +256,7 @@ namespace Jellyfin.Plugin.Federation
                         // and touch disposed DI-scoped services.
                         var shutdownToken = _appLifetime.ApplicationStopping;
                         await Task.Delay(TimeSpan.FromSeconds(5), shutdownToken).ConfigureAwait(false);
+                        ForkUpgradeCleanup.RemovePopularCollections(_libraryManager, Plugin.Instance?.DataFolderPath, _logger);
                         try
                         {
                             await _availability.EnsureProbedAsync(shutdownToken).ConfigureAwait(false);
