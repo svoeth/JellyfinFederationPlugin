@@ -32,9 +32,11 @@ namespace Jellyfin.Plugin.Federation.Services
     /// token is kept, in memory and in <c>federation-session-tokens.json</c>.
     /// </para>
     /// </summary>
-    public class FederationUserSessionTokenService
+    public class FederationUserSessionTokenService : IDisposable
     {
         private static readonly TimeSpan TokenLifetime = TimeSpan.FromHours(6);
+
+        internal const int MaxTokensPerFriend = 200;
 
         private const int MaxStoredTokens = 20000;
 
@@ -69,6 +71,17 @@ namespace Jellyfin.Plugin.Federation.Services
         public string Issue(string federationId, string remoteUserId)
         {
             Prune();
+
+            // A friend that keeps registering without playing would otherwise grow this
+            // store without limit for six hours; past the cap its oldest tokens go first.
+            var mine = _tokens.Where(kvp => string.Equals(kvp.Value.FederationId, federationId, StringComparison.Ordinal))
+                .OrderBy(kvp => kvp.Value.ExpiresUtc)
+                .ToList();
+            foreach (var stale in mine.Take(Math.Max(0, mine.Count - MaxTokensPerFriend + 1)))
+            {
+                _tokens.TryRemove(stale.Key, out _);
+            }
+
             var token = Convert.ToHexString(RandomNumberGenerator.GetBytes(24));
             _tokens[Key(token)] = new Entry(federationId, remoteUserId, DateTime.UtcNow + TokenLifetime);
             ScheduleSave();
@@ -99,6 +112,23 @@ namespace Jellyfin.Plugin.Federation.Services
             federationId = entry.FederationId;
             remoteUserId = entry.RemoteUserId;
             return true;
+        }
+
+        /// <summary>
+        /// Writes a pending save at shutdown: a token minted in the last moments
+        /// before a restart would otherwise be lost while the friend keeps using
+        /// it, and every direct play it starts is refused until the friend's
+        /// cached copy runs out.
+        /// </summary>
+        public void Dispose()
+        {
+            _saveTimer?.Dispose();
+            if (Volatile.Read(ref _saveScheduled) != 0)
+            {
+                Save();
+            }
+
+            GC.SuppressFinalize(this);
         }
 
         /// <summary>Writes the outstanding tokens' hashes; internal for tests.</summary>

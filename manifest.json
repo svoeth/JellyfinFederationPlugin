@@ -8,6 +8,14 @@
     "category": "General",
     "versions": [
       {
+        "version": "0.0.208",
+        "changelog": "Built on Saintdoggie's upstream 0.0.207, so it brings everything added there since 0.0.199: security and transport hardening, adaptive playback from measured connection speed, better phone, tablet and Android app playback, Playback Info that shows the real route, sparse settings saves that no longer erase friends or sharing settings, and the optional Plex add-in (Plex users: install Jellyfin.Plugin.Federation.Plex-0.0.208.zip from this release). On top of that, as proposed upstream in PR #16: friends see none of your users unless you share them, you choose which of your friends each friend sees, sharing can end on a date and the preview shows what a friend gets, popular titles and viewer names are shared only by choice, a friend's conversion log holds only its own conversion, and speed tests count toward a friend's data limit. Fixed: a title could stay refused (403) for up to a day after a friend's server restarted; tokens are now saved at shutdown and session tokens survive restarts. Friends' viewers whose names can't be verified show as \"Someone (friend)\" instead of disappearing from the dashboard. Coming from 0.0.196: this month's data totals carry over and the old \"Popular on\" collections are removed. Update both servers.",
+        "targetAbi": "12.0.0.0",
+        "timestamp": "2026-10-31T02:35:51Z",
+        "sourceUrl": "https://github.com/svoeth/JellyfinFederationPlugin/releases/download/0.0.208/Jellyfin.Federation.zip",
+        "checksum": "9fa373de7cffc90d3387f35d78f6679b"
+      },
+      {
         "version": "0.0.201",
         "changelog": "Fixes friends' titles that never start in a browser (the player keeps loading, the friend sees a viewer at 0:00) when a web server in front of Jellyfin sends broken headers. Your server now checks each friend's server and its own web page for the usual reverse-proxy mistakes: Access-Control-Allow-Origin sent twice, as a list or for the wrong site, Cross-Origin-Resource-Policy blocking your site, and a Content-Security-Policy or Cross-Origin-Embedder-Policy on your own server that leaves friends out. When converted video would be blocked, browsers get it converted on your server instead; every problem is named once in the plugin's Log tab with what to change. Includes everything in 0.0.200.",
         "targetAbi": "12.0.0.0",
