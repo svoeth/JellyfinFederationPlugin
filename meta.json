@@ -5,9 +5,9 @@
   "overview": "The Jellyfin Federation Plugin allows you to create a unified media library by aggregating content from multiple remote Jellyfin servers. Stream content from any server without file synchronization.",
   "owner": "Angablade",
   "category": "General",
-  "version": "0.0.209",
-  "changelog": "Fixes a fatal playback error (429 from your own server) when playing a friend's title that needs converting shortly after another one: the next episode, or the browser retrying a failed start. The friend's measured bandwidth is now shared instead of a play being refused, and a new play from the same device replaces its previous one. Plex users: install Jellyfin.Plugin.Federation.Plex-0.0.209.zip from this release. Includes everything in 0.0.208.",
+  "version": "0.0.210",
+  "changelog": "Fixes friends' titles that need converting failing with HTTP 502 (\"fatal error\" in the browser) when the friend has not set its own public address in the Federation settings: the friend answered every converted play with 502 and logged nothing. Both servers should update. Plex users: install Jellyfin.Plugin.Federation.Plex-0.0.210.zip from this release. Includes everything in 0.0.209.",
   "targetAbi": "12.0.0.0",
-  "timestamp": "2026-10-31T03:06:14Z",
+  "timestamp": "2026-10-31T10:18:00Z",
   "imageUrl": "https://raw.githubusercontent.com/Saintdoggie/JellyfinFederationPlugin/master/logo.png"
 }
